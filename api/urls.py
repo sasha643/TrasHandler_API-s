@@ -1,0 +1,33 @@
+from django.urls import path, include
+from rest_framework import routers
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.schemas import get_schema_view
+from .views import *
+
+customer_auth_router = routers.SimpleRouter()
+customer_auth_router.register(r'customerauth', CustomerAuthViewSet)
+
+vendor_auth_router = routers.SimpleRouter()
+vendor_auth_router.register(r'vendorauth', VendorAuthViewSet)
+
+upload_auth_router = routers.SimpleRouter()
+upload_auth_router.register(r'upload', PhotoUploadViewSet)
+
+vendor_location_router = routers.SimpleRouter()
+vendor_location_router.register(r'location', VendorLocationViewSet)
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name="schema")),
+    path('', include(customer_auth_router.urls)),
+    path('', include(vendor_auth_router.urls)),
+    path('', include(upload_auth_router.urls)),
+    path('', include(vendor_location_router.urls)),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
