@@ -14,7 +14,6 @@ class CustomerAuth(models.Model):
         return f'{self.name}'
 
 class VendorAuth(models.Model):
-    user = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True, blank=True)
     mobile_no = models.CharField(max_length=15)
@@ -39,8 +38,21 @@ class PhotoUpload(models.Model):
     def __str__(self):
         return f'{self.user.username} - {self.landmark}'
 
+class CustomerLocation(models.Model):
+    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    #timestamp = models.DateTimeField(auto_now_add=True)
 
-class VendorLocation(models.Model):
-    vendor = models.OneToOneField(VendorAuth, on_delete=models.CASCADE, related_name='location')
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    def __str__(self):
+        return f'{self.customer.name} - {self.latitude}, {self.longitude}'
+    
+class VendorCompleteProfile(models.Model):
+    vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
+    gstin_number = models.CharField(max_length=15)
+    business_name = models.CharField(max_length=255)
+    pan_card = models.ImageField(upload_to='pan_cards/')
+    business_photos = models.ImageField(upload_to='business_photos/')
+
+    def __str__(self):
+        return f'{self.vendor.name} - {self.business_name}'
