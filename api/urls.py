@@ -10,14 +10,26 @@ from .views import *
 customer_auth_router = routers.SimpleRouter()
 customer_auth_router.register(r'customerauth', CustomerAuthViewSet)
 
+customer_signin_router = routers.SimpleRouter()
+customer_signin_router.register(r'customersignin', CustomerSigninViewSet, basename='customersignin')
+
 vendor_auth_router = routers.SimpleRouter()
 vendor_auth_router.register(r'vendorauth', VendorAuthViewSet)
+
+vendor_signin_router = routers.SimpleRouter()
+vendor_signin_router.register(r'vendorsignin', VendorSigninViewSet, basename='vendorsignin')
 
 upload_auth_router = routers.SimpleRouter()
 upload_auth_router.register(r'upload', PhotoUploadViewSet)
 
-vendor_location_router = routers.SimpleRouter()
-vendor_location_router.register(r'location', VendorLocationViewSet)
+#vendor_location_router = routers.SimpleRouter()
+#vendor_location_router.register(r'vend_location', VendorLocationViewSet, basename='vend_location')
+
+customer_location_router = routers.SimpleRouter()
+customer_location_router.register(r'cust_location', CustomerLocationViewSet, basename='cust_location')
+
+vendor_complete_profile_router = routers.SimpleRouter()
+vendor_complete_profile_router.register(r'vendor-complete-profile', VendorCompleteProfileViewSet, basename='vendor-complete-profile')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,7 +38,11 @@ urlpatterns = [
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),
-    path('', include(vendor_location_router.urls)),
+    #path('', include(vendor_location_router.urls)),
+    path('', include(customer_location_router.urls)),
+    path('', include(vendor_signin_router.urls)),
+    path('', include(customer_signin_router.urls)),
+    path('', include(vendor_complete_profile_router.urls)),
 ]
 
 if settings.DEBUG:
