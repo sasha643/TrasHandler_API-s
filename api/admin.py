@@ -20,8 +20,13 @@ class VendorCompleteProfileModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'vendor', 'gstin_number', 'business_name', 'pan_card', 'business_photos']
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
+class VendorLocationModelAdmin(admin.ModelAdmin):
+    list_display = ['id', 'vendor', 'latitude', 'longitude']
+    search_fields = ['vendor__name', 'vendor__mobile_no']
+
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
 admin.site.register(VendorAuth, VendorAuthModelAdmin)
 admin.site.register(PhotoUpload, PhotoUploadModelAdmin)
 admin.site.register(CustomerLocation, CustomerLocationModelAdmin)
 admin.site.register(VendorCompleteProfile, VendorCompleteProfileModelAdmin)
+admin.site.register(VendorLocation, VendorLocationModelAdmin)
