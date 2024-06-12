@@ -22,8 +22,8 @@ vendor_signin_router.register(r'vendorsignin', VendorSigninViewSet, basename='ve
 upload_auth_router = routers.SimpleRouter()
 upload_auth_router.register(r'upload', PhotoUploadViewSet)
 
-#vendor_location_router = routers.SimpleRouter()
-#vendor_location_router.register(r'vend_location', VendorLocationViewSet, basename='vend_location')
+vendor_location_router = routers.SimpleRouter()
+vendor_location_router.register(r'vend_location', VendorLocationViewSet, basename='vend_location')
 
 customer_location_router = routers.SimpleRouter()
 customer_location_router.register(r'cust_location', CustomerLocationViewSet, basename='cust_location')
@@ -38,7 +38,7 @@ urlpatterns = [
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),
-    #path('', include(vendor_location_router.urls)),
+    path('', include(vendor_location_router.urls)),
     path('', include(customer_location_router.urls)),
     path('', include(vendor_signin_router.urls)),
     path('', include(customer_signin_router.urls)),
