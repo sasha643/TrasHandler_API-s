@@ -54,3 +54,16 @@ class VendorCompleteProfileSerializer(serializers.ModelSerializer):
         vendor = VendorAuth.objects.get(id=vendor_id)
         profile = VendorCompleteProfile.objects.create(vendor=vendor, **validated_data)
         return profile
+    
+class VendorLocationSerializer(serializers.ModelSerializer):
+    vendor_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = VendorLocation
+        fields = ['vendor_id', 'latitude', 'longitude']
+
+    def create(self, validated_data):
+        vendor_id = validated_data.pop('vendor_id')
+        vendor = VendorAuth.objects.get(id=vendor_id)
+        location = VendorLocation.objects.create(vendor=vendor, **validated_data)
+        return location
