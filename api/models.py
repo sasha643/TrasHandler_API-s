@@ -56,3 +56,12 @@ class VendorCompleteProfile(models.Model):
 
     def __str__(self):
         return f'{self.vendor.name} - {self.business_name}'
+    
+class VendorLocation(models.Model):
+    vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    #timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
