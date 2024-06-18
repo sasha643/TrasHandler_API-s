@@ -67,3 +67,26 @@ class VendorLocationSerializer(serializers.ModelSerializer):
         vendor = VendorAuth.objects.get(id=vendor_id)
         location = VendorLocation.objects.create(vendor=vendor, **validated_data)
         return location
+
+class PickupRequestSerializer(serializers.ModelSerializer):
+    customer_id = serializers.IntegerField(write_only=True)
+    customer_name = serializers.ReadOnlyField(source='customer.name')
+    customer_email = serializers.ReadOnlyField(source='customer.email')
+    customer_mobile_no = serializers.ReadOnlyField(source='customer.mobile_no')
+    vendor_id = serializers.ReadOnlyField(source='vendor.id')
+    vendor_name = serializers.ReadOnlyField(source='vendor.name')
+
+    class Meta:
+        model = PickupRequest
+        fields = ['customer_id', 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_mobile_no']
+
+    def create(self, validated_data):
+        customer_id = validated_data.pop('customer_id')
+        customer = CustomerAuth.objects.get(id=customer_id)
+        request = PickupRequest.objects.create(customer=customer, **validated_data)
+        return request
+
+class CustomerDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerAuth
+        fields = ['id', 'name', 'mobile_no']
