@@ -225,3 +225,93 @@ class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
     def perform_create(self, serializer):
         serializer.save()
+
+
+class VendorProfileDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, vendor_id, *args, **kwargs):
+        try:
+            vendor_profile = VendorCompleteProfile.objects.get(vendor_id=vendor_id)
+            serializer = VendorCompleteProfileSerializer(vendor_profile)
+            return Response({'business_name': serializer.data['business_name']}, status=status.HTTP_200_OK)
+        except VendorCompleteProfile.DoesNotExist:
+            return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    queryset = PickupRequest.objects.all()
+    serializer_class = PickupRequestSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        customer_id = serializer.validated_data['customer_id']
+        latitude = serializer.validated_data['latitude']
+        longitude = serializer.validated_data['longitude']
+
+        try:
+            customer = CustomerAuth.objects.get(id=customer_id)
+        except CustomerAuth.DoesNotExist:
+            return Response({"error": "Customer profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+
+        vendors = VendorLocation.objects.all()
+        min_distance = float('inf')
+        nearest_vendor = None
+
+        for vendor in vendors:
+            distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_vendor = vendor
+
+        if nearest_vendor:
+            pickup_request = PickupRequest.objects.create(
+                customer=customer,
+                latitude=latitude,
+                longitude=longitude,
+                vendor=nearest_vendor.vendor,
+                status='Assigned'
+            )
+            return Response({
+                "message": "Pickup request created and assigned to the nearest vendor",
+                "pickup_request": PickupRequestSerializer(pickup_request).data,
+            }, status=status.HTTP_201_CREATED)
+        else:
+            pickup_request = PickupRequest.objects.create(
+                customer=customer,
+                latitude=latitude,
+                longitude=longitude,
+                status='No Vendors Available'
+            )
+            return Response({"error": "No vendors found"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class VendorPickupRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, vendor_id, *args, **kwargs):
+        try:
+            vendor = VendorAuth.objects.get(id=vendor_id)
+        except VendorAuth.DoesNotExist:
+            return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+
+        pickup_requests = PickupRequest.objects.filter(vendor=vendor)
+        if not pickup_requests.exists():
+            return Response({"error": "No pickup requests found for the provided vendor"}, status=status.HTTP_404_NOT_FOUND)
+
+        customer_details = [
+            {
+                "customer_id": request.customer.id,
+                "customer_name": request.customer.name,
+                "customer_mobile_no": request.customer.mobile_no,
+                "latitude": request.latitude,
+                "longitude": request.longitude,
+                "status": request.status,
+            }
+            for request in pickup_requests
+        ]
+
+        return Response(customer_details, status=status.HTTP_200_OK)
