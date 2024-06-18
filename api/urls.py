@@ -31,6 +31,9 @@ customer_location_router.register(r'cust_location', CustomerLocationViewSet, bas
 vendor_complete_profile_router = routers.SimpleRouter()
 vendor_complete_profile_router.register(r'vendor-complete-profile', VendorCompleteProfileViewSet, basename='vendor-complete-profile')
 
+vendor_notification_router = routers.SimpleRouter()
+vendor_notification_router.register(r'pickup-request', PickupRequestViewSet, basename='pickup-request')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
@@ -43,6 +46,9 @@ urlpatterns = [
     path('', include(vendor_signin_router.urls)),
     path('', include(customer_signin_router.urls)),
     path('', include(vendor_complete_profile_router.urls)),
+    path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
+    path('', include(vendor_notification_router.urls)),
+    path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
 ]
 
 if settings.DEBUG:
