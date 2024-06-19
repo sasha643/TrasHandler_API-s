@@ -25,7 +25,7 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'latitude', 'longitude', 'vendor', 'status']
+    list_display = ['id', 'customer', 'vendor', 'status']
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
