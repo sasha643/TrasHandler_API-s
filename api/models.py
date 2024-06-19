@@ -67,11 +67,19 @@ class VendorLocation(models.Model):
         return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
 
 class PickupRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Request Sent', 'Request Sent'),
+        ('Accepted', 'Accepted'),
+        ('Rejected', 'Rejected'),
+    ]
+
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=50, default="Pending")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
 
     def __str__(self):
         return f'Request by {self.customer.name} - {self.status}'
+
+
