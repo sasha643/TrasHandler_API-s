@@ -273,7 +273,7 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 latitude=latitude,
                 longitude=longitude,
                 vendor=nearest_vendor.vendor,
-                status='Assigned'
+                status='Request Sent'
             )
             return Response({
                 "message": "Pickup request created and assigned to the nearest vendor",
