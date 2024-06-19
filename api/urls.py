@@ -47,8 +47,11 @@ urlpatterns = [
     path('', include(customer_signin_router.urls)),
     path('', include(vendor_complete_profile_router.urls)),
     path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
+    path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('', include(vendor_notification_router.urls)),
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
+    path('update-pickup-request-status/', UpdatePickupRequestStatusView.as_view(), name='update-pickup-request-status'),
+    path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request')
 ]
 
 if settings.DEBUG:
