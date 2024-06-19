@@ -86,7 +86,12 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         request = PickupRequest.objects.create(customer=customer, **validated_data)
         return request
 
-class CustomerDetailsSerializer(serializers.ModelSerializer):
+class VendorDetailsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomerAuth
-        fields = ['id', 'name', 'mobile_no']
+        model = VendorAuth
+        fields = ['id', 'name', 'email', 'mobile_no']        
+
+class UpdatePickupRequestStatusSerializer(serializers.Serializer):
+    vendor_id = serializers.IntegerField()
+    pickup_request_id = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=PickupRequest.STATUS_CHOICES)
