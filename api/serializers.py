@@ -95,3 +95,7 @@ class UpdatePickupRequestStatusSerializer(serializers.Serializer):
     vendor_id = serializers.IntegerField()
     pickup_request_id = serializers.IntegerField()
     status = serializers.ChoiceField(choices=PickupRequest.STATUS_CHOICES)
+
+class RejectAndReassignPickupRequestSerializer(serializers.Serializer):
+    vendor_id = serializers.IntegerField()
+    pickup_request_id = serializers.IntegerField()
