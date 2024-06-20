@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'rest_framework',
     'drf_spectacular',
+    'corsheaders'
 ]
 
 
@@ -63,6 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -92,11 +95,11 @@ WSGI_APPLICATION = 'trashapi.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'New',
-        'USER': 'postgres',
-        'PASSWORD': 'Saurabh@123',
-        'HOST': 'localhost',  
-        'PORT': '5432',        
+        'NAME': '',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',  
+        'PORT': '',        
     }
 }
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -149,3 +152,20 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE":"API_DOCS",
 }
+
+# CORS settings
+CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify allowed origins
+# OR specify allowed origins
+# CORS_ALLOWED_ORIGINS = [
+#     'http://192.168.1.2:8000',  # Replace with your server's IP
+#     'http://localhost:8000',
+# ]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS'
+]
