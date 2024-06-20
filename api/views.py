@@ -362,3 +362,56 @@ class CustomerPickupRequestView(APIView):
         vendor = pickup_request.vendor
         serializer = VendorDetailsSerializer(vendor)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class RejectAndReassignPickupRequestView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = RejectAndReassignPickupRequestSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        vendor_id = serializer.validated_data['vendor_id']
+        pickup_request_id = serializer.validated_data['pickup_request_id']
+
+        try:
+            vendor = VendorAuth.objects.get(id=vendor_id)
+        except VendorAuth.DoesNotExist:
+            return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            pickup_request = PickupRequest.objects.get(id=pickup_request_id, vendor=vendor)
+        except PickupRequest.DoesNotExist:
+            return Response({"error": "Pickup request not found for the provided ID and vendor"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Mark the current vendor as having rejected the request
+        pickup_request.status = 'Rejected'
+        pickup_request.rejected_vendors.add(vendor)
+        pickup_request.save()
+
+        # Find the next nearest vendor who has not rejected the request
+        customer_location = (pickup_request.latitude, pickup_request.longitude)
+        vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all())
+        min_distance = float('inf')
+        nearest_vendor = None
+
+        for vendor_location in vendors:
+            distance = haversine(
+                customer_location[0], customer_location[1],
+                vendor_location.latitude, vendor_location.longitude
+            )
+            if distance < min_distance:
+                min_distance = distance
+                nearest_vendor = vendor_location.vendor
+
+        if nearest_vendor:
+            pickup_request.vendor = nearest_vendor
+            pickup_request.status = 'Request Sent'
+            pickup_request.save()
+
+            return Response({
+                "message": "Pickup request reassigned to the next nearest vendor",
+                "pickup_request": PickupRequestSerializer(pickup_request).data,
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "No other vendors available"}, status=status.HTTP_404_NOT_FOUND)
