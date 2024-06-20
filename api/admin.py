@@ -25,8 +25,12 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'vendor', 'status']
+    list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors']
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
+
+    def get_rejected_vendors(self, obj):
+        return obj.get_rejected_vendors()
+    get_rejected_vendors.short_description = 'Rejected Vendors'
 
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
 admin.site.register(VendorAuth, VendorAuthModelAdmin)
