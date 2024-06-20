@@ -78,8 +78,12 @@ class PickupRequest(models.Model):
     longitude = models.FloatField()
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
+    rejected_vendors = models.ManyToManyField(VendorAuth, related_name='rejected_requests', blank=True)
 
     def __str__(self):
         return f'Request by {self.customer.name} - {self.status}'
+
+    def get_rejected_vendors(self):
+        return ", ".join([vendor.name for vendor in self.rejected_vendors.all()])
 
 
