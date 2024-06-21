@@ -68,6 +68,14 @@ class VendorLocationSerializer(serializers.ModelSerializer):
         location = VendorLocation.objects.create(vendor=vendor, **validated_data)
         return location
 
+class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
+    vendor_id = serializers.IntegerField(write_only=True)
+    is_active = serializers.BooleanField()
+
+    class Meta:
+        model = VendorLocation
+        fields = ['vendor_id', 'is_active']
+
 class PickupRequestSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
     customer_name = serializers.ReadOnlyField(source='customer.name')
