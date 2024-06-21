@@ -25,6 +25,9 @@ upload_auth_router.register(r'upload', PhotoUploadViewSet)
 vendor_location_router = routers.SimpleRouter()
 vendor_location_router.register(r'vend_location', VendorLocationViewSet, basename='vend_location')
 
+vendor_status_router = routers.SimpleRouter()
+vendor_status_router.register(r'vendor_status', VendorStatusUpdateViewSet, basename='vendor_status')
+
 customer_location_router = routers.SimpleRouter()
 customer_location_router.register(r'cust_location', CustomerLocationViewSet, basename='cust_location')
 
@@ -46,6 +49,7 @@ urlpatterns = [
     path('', include(vendor_signin_router.urls)),
     path('', include(customer_signin_router.urls)),
     path('', include(vendor_complete_profile_router.urls)),
+    path('', include(vendor_status_router.urls)),
     path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('', include(vendor_notification_router.urls)),
