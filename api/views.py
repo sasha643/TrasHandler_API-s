@@ -226,6 +226,34 @@ class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     def perform_create(self, serializer):
         serializer.save()
 
+class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
+    queryset = VendorLocation.objects.all()
+    serializer_class = VendorLocationStatusUpdateSerializer
+    permission_classes = [AllowAny]
+
+    def update_status(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        vendor_id = serializer.validated_data['vendor_id']
+        is_active = serializer.validated_data['is_active']
+
+        try:
+            vendor = VendorAuth.objects.get(id=vendor_id)
+        except VendorAuth.DoesNotExist:
+            return Response({"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            vendor_location = VendorLocation.objects.get(vendor=vendor)
+            vendor_location.is_active = is_active
+            vendor_location.save()
+        except VendorLocation.DoesNotExist:
+            return Response({"error": "Vendor location not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        return self.update_status(request, *args, **kwargs)
+
 
 class VendorProfileDetailView(APIView):
     permission_classes = [AllowAny]
@@ -257,11 +285,12 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         except CustomerAuth.DoesNotExist:
             return Response({"error": "Customer profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
 
-        vendors = VendorLocation.objects.all()
+        # Filter vendors where is_active is True
+        active_vendors = VendorLocation.objects.filter(is_active=True)
         min_distance = float('inf')
         nearest_vendor = None
 
-        for vendor in vendors:
+        for vendor in active_vendors:
             distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
             if distance < min_distance:
                 min_distance = distance
@@ -276,7 +305,7 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 status='Request Sent'
             )
             return Response({
-                "message": "Pickup request created and assigned to the nearest vendor",
+                "message": "Pickup request created and assigned to the nearest active vendor",
                 "pickup_request": PickupRequestSerializer(pickup_request).data,
             }, status=status.HTTP_201_CREATED)
         else:
@@ -284,9 +313,9 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 customer=customer,
                 latitude=latitude,
                 longitude=longitude,
-                status='No Vendors Available'
+                status='No Active Vendors Available'
             )
-            return Response({"error": "No vendors found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No active vendors found"}, status=status.HTTP_404_NOT_FOUND)
         
 
 
