@@ -21,7 +21,7 @@ class VendorCompleteProfileModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class VendorLocationModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'vendor', 'latitude', 'longitude']
+    list_display = ['id', 'vendor', 'latitude', 'longitude', 'is_active']
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
