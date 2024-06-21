@@ -389,13 +389,13 @@ class RejectAndReassignPickupRequestView(APIView):
         pickup_request.rejected_vendors.add(vendor)
         pickup_request.save()
 
-        # Find the next nearest vendor who has not rejected the request
+        # Find the next nearest active vendor who has not rejected the request
         customer_location = (pickup_request.latitude, pickup_request.longitude)
-        vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all())
+        active_vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all()).filter(is_active=True)
         min_distance = float('inf')
         nearest_vendor = None
 
-        for vendor_location in vendors:
+        for vendor_location in active_vendors:
             distance = haversine(
                 customer_location[0], customer_location[1],
                 vendor_location.latitude, vendor_location.longitude
@@ -410,8 +410,8 @@ class RejectAndReassignPickupRequestView(APIView):
             pickup_request.save()
 
             return Response({
-                "message": "Pickup request reassigned to the next nearest vendor",
+                "message": "Pickup request reassigned to the next nearest active vendor",
                 "pickup_request": PickupRequestSerializer(pickup_request).data,
             }, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "No other vendors available"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No other active vendors available"}, status=status.HTTP_404_NOT_FOUND)
