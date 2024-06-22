@@ -57,6 +57,7 @@ urlpatterns = [
     path('update-pickup-request-status/', UpdatePickupRequestStatusView.as_view(), name='update-pickup-request-status'),
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
     path('reject-and-reassign-pickup-request/', RejectAndReassignPickupRequestView.as_view(), name='reject-and-reassign-pickup-request'),
+    path('customer/reject-pickup-request/', CustomerRejectPickupRequestView.as_view(), name='customer-reject-pickup-request'),
     
 ]
 
