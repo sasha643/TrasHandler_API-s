@@ -107,3 +107,8 @@ class UpdatePickupRequestStatusSerializer(serializers.Serializer):
 class RejectAndReassignPickupRequestSerializer(serializers.Serializer):
     vendor_id = serializers.IntegerField()
     pickup_request_id = serializers.IntegerField()
+
+class RejectPickupRequestSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField()
+    pickup_request_id = serializers.IntegerField()
+    remarks = serializers.CharField(required=False)
