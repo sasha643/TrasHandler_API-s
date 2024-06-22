@@ -89,7 +89,7 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     Handle uploading photos
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     serializer_class = PhotoUploadSerializer
     queryset = PhotoUpload.objects.all()
 
@@ -230,6 +230,7 @@ class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     def perform_create(self, serializer):
         serializer.save()
 
+
 class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationStatusUpdateSerializer
@@ -257,7 +258,7 @@ class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         return self.update_status(request, *args, **kwargs)
-
+        
 
 class VendorProfileDetailView(APIView):
     permission_classes = [AllowAny]
@@ -320,7 +321,6 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 status='No Active Vendors Available'
             )
             return Response({"error": "No active vendors found"}, status=status.HTTP_404_NOT_FOUND)
-        
 
 
 class VendorPickupRequestView(APIView):
@@ -350,6 +350,7 @@ class VendorPickupRequestView(APIView):
         ]
 
         return Response(customer_details, status=status.HTTP_200_OK)
+    
 
 class UpdatePickupRequestStatusView(generics.GenericAPIView):
     serializer_class = UpdatePickupRequestStatusSerializer
@@ -394,7 +395,14 @@ class CustomerPickupRequestView(APIView):
 
         vendor = pickup_request.vendor
         serializer = VendorDetailsSerializer(vendor)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        response_data = {
+            "vendor_details": serializer.data,
+            "pickup_request_id": pickup_request.id,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+    
 
 class RejectAndReassignPickupRequestView(APIView):
     permission_classes = [AllowAny]
@@ -448,3 +456,29 @@ class RejectAndReassignPickupRequestView(APIView):
             }, status=status.HTTP_200_OK)
         else:
             return Response({"error": "No other active vendors available"}, status=status.HTTP_404_NOT_FOUND)
+        
+class CustomerRejectPickupRequestView(generics.GenericAPIView):
+    serializer_class = RejectPickupRequestSerializer  
+    permission_classes = [AllowAny]  
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        customer_id = serializer.validated_data['customer_id']
+        pickup_request_id = serializer.validated_data['pickup_request_id']
+        remarks = serializer.validated_data.get('remarks', 'Rejected by customer')
+
+        try:
+            pickup_request = PickupRequest.objects.get(id=pickup_request_id, customer_id=customer_id)
+        except PickupRequest.DoesNotExist:
+            return Response({"error": "Pickup request not found for the provided ID and customer"}, status=status.HTTP_404_NOT_FOUND)
+
+        if pickup_request.status != 'Accepted':
+            return Response({"error": "This pickup request is not currently accepted by any vendor"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pickup_request.status = 'Rejected'
+        pickup_request.remarks = remarks
+        pickup_request.save()
+
+        return Response({"message": "Pickup request rejected successfully", "pickup_request": PickupRequestSerializer(pickup_request).data}, status=status.HTTP_200_OK)
