@@ -41,6 +41,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name="schema")),
+    path('api/auth/customer/register/', CustomerAuthRegisterView.as_view(), name='customer-register'),
+    path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
+    path('api/auth/customer/login/', CustomerSigninView.as_view(), name='customer-login'),
+    path('api/auth/vendor/login/', VendorSigninView.as_view(), name='vendor-login'),
+    path('api/auth/', include('dj_rest_auth.urls')), 
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),
@@ -56,8 +61,6 @@ urlpatterns = [
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('update-pickup-request-status/', UpdatePickupRequestStatusView.as_view(), name='update-pickup-request-status'),
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
-    path('reject-and-reassign-pickup-request/', RejectAndReassignPickupRequestView.as_view(), name='reject-and-reassign-pickup-request'),
-    path('customer/reject-pickup-request/', CustomerRejectPickupRequestView.as_view(), name='customer-reject-pickup-request'),
     
 ]
 

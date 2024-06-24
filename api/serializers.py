@@ -1,7 +1,55 @@
 from rest_framework import serializers
 from .models import *
+from django.contrib.auth import get_user_model
 
 
+User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username','email', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
+
+class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = CustomerAuth
+        fields = ('user', 'mobile_no')
+
+    # def
+
+    # def create(self, validated_data):
+    #     customer = CustomerAuth.objects.create(
+    #         mobile_no=validated_data['mobile_no'],
+    #         name=validated_data['name'],
+    #     )
+    #     # customer.set_password(validated_data['password'])
+    #     customer.save()
+    #     return customer
+
+ 
+
+class VendorAuthRegisterSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    class Meta:
+        model = VendorAuth
+        fields = ('user', 'mobile_no')
+
+        # def create(self, validated_data):
+        #     vendor = VendorAuth.objects.create(
+        #         mobile_no=validated_data['mobile_no'],
+        #         name=validated_data['name'],
+        #     )
+        #     # vendor.set_password(validated_data['password'])
+        #     vendor.save()
+        #     return vendor
+   
 class CustomerAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAuth
@@ -104,11 +152,3 @@ class UpdatePickupRequestStatusSerializer(serializers.Serializer):
     pickup_request_id = serializers.IntegerField()
     status = serializers.ChoiceField(choices=PickupRequest.STATUS_CHOICES)
 
-class RejectAndReassignPickupRequestSerializer(serializers.Serializer):
-    vendor_id = serializers.IntegerField()
-    pickup_request_id = serializers.IntegerField()
-
-class RejectPickupRequestSerializer(serializers.Serializer):
-    customer_id = serializers.IntegerField()
-    pickup_request_id = serializers.IntegerField()
-    remarks = serializers.CharField(required=False)

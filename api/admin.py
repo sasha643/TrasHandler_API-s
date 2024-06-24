@@ -4,10 +4,10 @@ from .models import *
 # Register your models here.
 
 class CustomerAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = [ 'name', 'email', 'mobile_no']
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = [ 'name', 'email', 'mobile_no']
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'photo', 'description', 'landmark', 'time_slot']
@@ -25,7 +25,7 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors', 'remarks']
+    list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors']
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
     def get_rejected_vendors(self, obj):

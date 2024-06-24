@@ -5,15 +5,67 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
+from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from .models import *
 from .serializers import *
-from .functions import *
+from haversine import haversine
 
 # Create your views here.
 
 User = get_user_model()
+
+class CustomerAuthRegisterView(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CustomerAuthRegisterSerializer
+
+    def perform_create(self, serializer):
+        user_data = serializer.validated_data.pop('user')
+        user = User.objects.create_user(**user_data)
+        CustomerAuth.objects.create(user=user, **serializer.validated_data)
+
+class VendorAuthRegisterView(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = VendorAuthRegisterSerializer
+
+    def perform_create(self, serializer):
+        user_data = serializer.validated_data.pop('user')
+        user = User.objects.create_user(**user_data)
+        VendorAuth.objects.create(user=user, **serializer.validated_data)
+
+class CustomerSigninView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = CustomerSigninSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            mobile_no = serializer.validated_data['mobile_no']
+            try:
+                customer = CustomerAuth.objects.get(mobile_no=mobile_no)
+                token, created = Token.objects.get_or_create(user=customer)
+                return Response({'token': token.key, 'message': 'Login successful', 'customer_id': customer.id, 'name': customer.name})
+            except CustomerAuth.DoesNotExist:
+                return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class VendorSigninView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = VendorSigninSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            mobile_no = serializer.validated_data['mobile_no']
+            try:
+                vendor = VendorAuth.objects.get(mobile_no=mobile_no)
+                token, created = Token.objects.get_or_create(user=vendor)
+                return Response({'token': token.key, 'message': 'Login successful', 'vendor_id': vendor.id, 'name': vendor.name})
+            except VendorAuth.DoesNotExist:
+                return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()
@@ -296,7 +348,9 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         nearest_vendor = None
 
         for vendor in active_vendors:
-            distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
+            vendor_coord = (float(vendor.latitude), float(vendor.longitude))
+            norm_coords = (float(latitude), float(longitude))
+            distance = haversine(norm_coords, vendor_coord)
             if distance < min_distance:
                 min_distance = distance
                 nearest_vendor = vendor
@@ -404,81 +458,3 @@ class CustomerPickupRequestView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
     
 
-class RejectAndReassignPickupRequestView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = RejectAndReassignPickupRequestSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        vendor_id = serializer.validated_data['vendor_id']
-        pickup_request_id = serializer.validated_data['pickup_request_id']
-
-        try:
-            vendor = VendorAuth.objects.get(id=vendor_id)
-        except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            pickup_request = PickupRequest.objects.get(id=pickup_request_id, vendor=vendor)
-        except PickupRequest.DoesNotExist:
-            return Response({"error": "Pickup request not found for the provided ID and vendor"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Mark the current vendor as having rejected the request
-        pickup_request.status = 'Rejected'
-        pickup_request.rejected_vendors.add(vendor)
-        pickup_request.save()
-
-        # Find the next nearest active vendor who has not rejected the request
-        customer_location = (pickup_request.latitude, pickup_request.longitude)
-        active_vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all()).filter(is_active=True)
-        min_distance = float('inf')
-        nearest_vendor = None
-
-        for vendor_location in active_vendors:
-            distance = haversine(
-                customer_location[0], customer_location[1],
-                vendor_location.latitude, vendor_location.longitude
-            )
-            if distance < min_distance:
-                min_distance = distance
-                nearest_vendor = vendor_location.vendor
-
-        if nearest_vendor:
-            pickup_request.vendor = nearest_vendor
-            pickup_request.status = 'Request Sent'
-            pickup_request.save()
-
-            return Response({
-                "message": "Pickup request reassigned to the next nearest active vendor",
-                "pickup_request": PickupRequestSerializer(pickup_request).data,
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "No other active vendors available"}, status=status.HTTP_404_NOT_FOUND)
-        
-class CustomerRejectPickupRequestView(generics.GenericAPIView):
-    serializer_class = RejectPickupRequestSerializer  
-    permission_classes = [AllowAny]  
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        customer_id = serializer.validated_data['customer_id']
-        pickup_request_id = serializer.validated_data['pickup_request_id']
-        remarks = serializer.validated_data.get('remarks', 'Rejected by customer')
-
-        try:
-            pickup_request = PickupRequest.objects.get(id=pickup_request_id, customer_id=customer_id)
-        except PickupRequest.DoesNotExist:
-            return Response({"error": "Pickup request not found for the provided ID and customer"}, status=status.HTTP_404_NOT_FOUND)
-
-        if pickup_request.status != 'Accepted':
-            return Response({"error": "This pickup request is not currently accepted by any vendor"}, status=status.HTTP_400_BAD_REQUEST)
-
-        pickup_request.status = 'Rejected'
-        pickup_request.remarks = remarks
-        pickup_request.save()
-
-        return Response({"message": "Pickup request rejected successfully", "pickup_request": PickupRequestSerializer(pickup_request).data}, status=status.HTTP_200_OK)
