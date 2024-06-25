@@ -4,3 +4,4 @@ Django==4.0.10
 django-environ==0.10.0
 djangorestframework==3.14.0
 drf-spectacular==0.26.0
+whitenoise==6.4.0
