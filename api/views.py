@@ -390,20 +390,21 @@ class VendorPickupRequestView(APIView):
         if not pickup_requests.exists():
             return Response({"error": "No pickup requests found for the provided vendor"}, status=status.HTTP_404_NOT_FOUND)
 
-        customer_details = [
-            {
+        pickup_requests_data = []
+        for request in pickup_requests:
+            request_data = {
                 "customer_id": request.customer.id,
                 "customer_name": request.customer.name,
                 "customer_mobile_no": request.customer.mobile_no,
                 "latitude": request.latitude,
                 "longitude": request.longitude,
-                "pickup_request_id": request.id,  # Add the pickup_request_id here
+                "pickup_request_id": request.id,
                 "status": request.status,
+                "remarks": request.remarks,  # Include remarks field
             }
-            for request in pickup_requests
-        ]
+            pickup_requests_data.append(request_data)
 
-        return Response(customer_details, status=status.HTTP_200_OK)
+        return Response(pickup_requests_data, status=status.HTTP_200_OK)
     
 
 class UpdatePickupRequestStatusView(generics.GenericAPIView):
