@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 import environ
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
@@ -103,7 +104,9 @@ DATABASES = {
         'PORT': '5432',        
     }
 }
-DATABASES["default"]["ATOMIC_REQUESTS"] = True
+#DATABASES["default"]["ATOMIC_REQUESTS"] = True
+
+DATABASES['default'] = dj_database_url.parse('postgresql://trasapi_django_render_user:hxB4Vq8uWNmgSMkd9vvgaqBNcBeN0RHW@dpg-cptggkjqf0us73c54ulg-a.oregon-postgres.render.com/trasapi_django_render')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
