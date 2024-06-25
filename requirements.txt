@@ -7,3 +7,4 @@ drf-spectacular==0.26.0
 whitenoise==6.4.0
 gunicorn==20.1.0
 dj-database-url==2.2.0
+django-rest-swagger==2.2.0
