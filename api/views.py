@@ -8,8 +8,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
+from django.contrib.auth import authenticate
 from .models import *
 from .serializers import *
+from django.conf import settings
 from haversine import haversine
 
 # Create your views here.
@@ -20,19 +22,11 @@ class CustomerAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CustomerAuthRegisterSerializer
 
-    def perform_create(self, serializer):
-        user_data = serializer.validated_data.pop('user')
-        user = User.objects.create_user(**user_data)
-        CustomerAuth.objects.create(user=user, **serializer.validated_data)
 
 class VendorAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = VendorAuthRegisterSerializer
 
-    def perform_create(self, serializer):
-        user_data = serializer.validated_data.pop('user')
-        user = User.objects.create_user(**user_data)
-        VendorAuth.objects.create(user=user, **serializer.validated_data)
 
 class CustomerSigninView(APIView):
     permission_classes = [AllowAny]
@@ -42,14 +36,16 @@ class CustomerSigninView(APIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             mobile_no = serializer.validated_data['mobile_no']
-            try:
-                customer = CustomerAuth.objects.get(mobile_no=mobile_no)
-                token, created = Token.objects.get_or_create(user=customer)
-                return Response({'token': token.key, 'message': 'Login successful', 'customer_id': customer.id, 'name': customer.name})
-            except CustomerAuth.DoesNotExist:
-                return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            user = authenticate(request, mobile_no=mobile_no, is_customer=True)
+            if user:
+                try:
+                    customer = CustomerAuth.objects.get(user=user)
+                    token, created = Token.objects.get_or_create(user=user)
+                    return Response({'token': token.key, 'message': 'Login successful', 'customer_id': customer.user.user_id, 'name': customer.user.name})
+                except CustomerAuth.DoesNotExist:
+                    return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 class VendorSigninView(APIView):
     permission_classes = [AllowAny]
@@ -59,12 +55,15 @@ class VendorSigninView(APIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             mobile_no = serializer.validated_data['mobile_no']
-            try:
-                vendor = VendorAuth.objects.get(mobile_no=mobile_no)
-                token, created = Token.objects.get_or_create(user=vendor)
-                return Response({'token': token.key, 'message': 'Login successful', 'vendor_id': vendor.id, 'name': vendor.name})
-            except VendorAuth.DoesNotExist:
-                return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            user = authenticate(request, mobile_no=mobile_no, is_customer=False)
+            if user:
+                try:
+                    vendor = VendorAuth.objects.get(user=user)
+                    token, created = Token.objects.get_or_create(user=user)
+                    return Response({'token': token.key, 'message': 'Login successful', 'vendor_id': vendor.user.user_id, 'name': vendor.user.name})
+                except VendorAuth.DoesNotExist:
+                    return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerAuthViewSet(viewsets.GenericViewSet):
@@ -141,7 +140,7 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     Handle uploading photos
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     serializer_class = PhotoUploadSerializer
     queryset = PhotoUpload.objects.all()
 

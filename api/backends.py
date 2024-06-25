@@ -1,31 +1,22 @@
+# backends.py
 from django.contrib.auth.backends import BaseBackend
-from .models import CustomerAuth, VendorAuth, User
+from django.contrib.auth import get_user_model
+from .models import CustomerAuth, VendorAuth
 
-class CustomerBackend(BaseBackend):
-    def authenticate(self, request, email=None, password=None, **kwargs):
-        try:
-            user = User.objects.get(email=email)
-            customer = CustomerAuth.objects.get(user=user)
-            if user.check_password(password):
-                return user
-        except (User.DoesNotExist, CustomerAuth.DoesNotExist):
-            return None
+User = get_user_model()
 
-    def get_user(self, user_id):
+class MobileNoBackend(BaseBackend):
+    def authenticate(self, request, mobile_no=None, is_customer=False, **kwargs):
         try:
-            return User.objects.get(pk=user_id)
+            if is_customer:
+                user = User.objects.get(customerauth__mobile_no=mobile_no)
+            else:
+                user = User.objects.get(vendorauth__mobile_no=mobile_no)
+            return user
         except User.DoesNotExist:
             return None
-
-class VendorBackend(BaseBackend):
-    def authenticate(self, request, email=None, password=None, **kwargs):
-        try:
-            user = User.objects.get(email=email)
-            vendor = VendorAuth.objects.get(user=user)
-            if user.check_password(password):
-                return user
-        except (User.DoesNotExist, VendorAuth.DoesNotExist):
-            return None
+        except User.MultipleObjectsReturned:
+            return None  # or handle the conflict
 
     def get_user(self, user_id):
         try:

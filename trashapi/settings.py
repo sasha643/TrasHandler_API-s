@@ -49,12 +49,12 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'drf_spectacular',
     'corsheaders',
-    'api',
+    
 ]
 
 
 EXTERNAL_APPS = [
-    
+    'api',
     'trashapi',
 ]
 
@@ -72,9 +72,11 @@ REST_FRAMEWORK = {
     ],
 }
 
+## User model
+AUTH_USER_MODEL = 'api.User'
+
 AUTHENTICATION_BACKENDS = [
-    'api.backends.CustomerBackend',
-    'api.backends.VendorBackend',
+    'api.backends.MobileNoBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -114,27 +116,25 @@ WSGI_APPLICATION = 'trashapi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'Demo',
-#         'USER': 'postgres',
-#         'PASSWORD': 'Benyo0310',
-#         'HOST': 'postgres',  
-#         'PORT': '',        
-#     }
-# }
-# DATABASES["default"]["ATOMIC_REQUESTS"] = True
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'Demo',
+        'USER': 'postgres',
+        'PASSWORD': 'Benyo0310',
+        'HOST': 'localhost',  
+        'PORT': '5432',        
     }
 }
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
-## User model
-AUTH_USER_MODEL = 'api.User'
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

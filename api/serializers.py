@@ -1,6 +1,8 @@
+from attr import fields
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth import get_user_model
+
 
 
 User = get_user_model()
@@ -8,12 +10,10 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username','email', 'password')
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('name', 'email')
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
 class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -22,33 +22,24 @@ class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
         model = CustomerAuth
         fields = ('user', 'mobile_no')
 
-    # def
-
-    # def create(self, validated_data):
-    #     customer = CustomerAuth.objects.create(
-    #         mobile_no=validated_data['mobile_no'],
-    #         name=validated_data['name'],
-    #     )
-    #     # customer.set_password(validated_data['password'])
-    #     customer.save()
-    #     return customer
-
- 
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create_user(**user_data)
+        customer_auth = CustomerAuth.objects.create(user=user, **validated_data)
+        return customer_auth
 
 class VendorAuthRegisterSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+
     class Meta:
         model = VendorAuth
         fields = ('user', 'mobile_no')
 
-        # def create(self, validated_data):
-        #     vendor = VendorAuth.objects.create(
-        #         mobile_no=validated_data['mobile_no'],
-        #         name=validated_data['name'],
-        #     )
-        #     # vendor.set_password(validated_data['password'])
-        #     vendor.save()
-        #     return vendor
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create_user(**user_data)
+        vendor_auth = VendorAuth.objects.create(user=user, **validated_data)
+        return vendor_auth
    
 class CustomerAuthSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,9 +53,11 @@ class VendorAuthSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 
-class VendorSigninSerializer(serializers.Serializer):
+class CustomerSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
 
+class VendorSigninSerializer(serializers.Serializer):
+    mobile_no = serializers.CharField(max_length=15)
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
@@ -73,8 +66,6 @@ class PhotoUploadSerializer(serializers.ModelSerializer):
         model = PhotoUpload
         fields = '__all__'
 
-class CustomerSigninSerializer(serializers.Serializer):
-    mobile_no = serializers.CharField(max_length=15)
 
 
 class CustomerLocationSerializer(serializers.ModelSerializer):
