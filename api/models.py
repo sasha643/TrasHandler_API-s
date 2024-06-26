@@ -61,7 +61,7 @@ class VendorLocation(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
-    #timestamp = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
