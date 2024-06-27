@@ -4,10 +4,20 @@ from .models import *
 # Register your models here.
 
 class CustomerAuthModelAdmin(admin.ModelAdmin):
-    list_display = [ 'user', 'mobile_no']
+    list_display = ['id', 'customer_name','user', 'mobile_no']
+
+    def customer_name(self, obj):
+        return obj.user.name
+    def id(self, obj):
+        return obj.user.id
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = [ 'user', 'mobile_no']
+    list_display = ['id', 'vendor_name', 'user', 'mobile_no']
+
+    def vendor_name(self, obj):
+        return obj.user.name
+    def id(self, obj):
+        return obj.user.id
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'photo', 'description', 'landmark', 'time_slot']
@@ -25,12 +35,12 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors']
+    list_display = ['id', 'customer', 'vendor', 'status',]
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
-    def get_rejected_vendors(self, obj):
-        return obj.get_rejected_vendors()
-    get_rejected_vendors.short_description = 'Rejected Vendors'
+    # def get_rejected_vendors(self, obj):
+    #     return obj.get_rejected_vendors()
+    # get_rejected_vendors.short_description = 'Rejected Vendors'
 
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
 admin.site.register(VendorAuth, VendorAuthModelAdmin)

@@ -45,7 +45,7 @@ urlpatterns = [
     path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
     path('api/auth/customer/login/', CustomerSigninView.as_view(), name='customer-login'),
     path('api/auth/vendor/login/', VendorSigninView.as_view(), name='vendor-login'),
-    path('api/auth/', include('dj_rest_auth.urls')), 
+    path('api/auth/logout/', include('dj_rest_auth.urls')), 
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),

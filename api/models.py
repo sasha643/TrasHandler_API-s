@@ -29,7 +29,7 @@ class AppUserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-	user_id = models.AutoField(primary_key=True)
+	id = models.AutoField(primary_key=True)
 	email = models.EmailField(max_length=50, unique=True)
 	name = models.CharField(max_length=50)
 	is_active = models.BooleanField(default=True)
@@ -72,7 +72,7 @@ class PhotoUpload(models.Model):
     time_slot = models.CharField(max_length=10, choices=TIME_SLOTS)
 
     def __str__(self):
-        return f'{self.user.username} - {self.landmark}'
+        return f'{self.user.name} - {self.landmark}'
 
 class CustomerLocation(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
@@ -81,7 +81,7 @@ class CustomerLocation(models.Model):
     is_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.customer.name} - {self.latitude}, {self.longitude}'
+        return f'{self.customer.user.name} - {self.latitude}, {self.longitude}'
     
 class VendorCompleteProfile(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
@@ -91,7 +91,7 @@ class VendorCompleteProfile(models.Model):
     business_photos = models.ImageField(upload_to='business_photos/')
 
     def __str__(self):
-        return f'{self.vendor.name} - {self.business_name}'
+        return f'{self.vendor.user.name} - {self.business_name}'
     
 class VendorLocation(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
@@ -101,7 +101,7 @@ class VendorLocation(models.Model):
     #timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
+        return f'{self.vendor.user.name} - {self.latitude}, {self.longitude}'
 
 class PickupRequest(models.Model):
     STATUS_CHOICES = [
@@ -118,6 +118,6 @@ class PickupRequest(models.Model):
 
 
     def __str__(self):
-        return f'Request by {self.customer.name} - {self.status}'
+        return f'Request by {self.customer.user.name} - {self.status}'
 
 

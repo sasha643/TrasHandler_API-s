@@ -70,16 +70,30 @@ class PhotoUploadSerializer(serializers.ModelSerializer):
 
 class CustomerLocationSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
 
     class Meta:
         model = CustomerLocation
         fields = ['customer_id', 'latitude', 'longitude']
 
     def create(self, validated_data):
-        customer_id = validated_data.pop('customer_id')
-        customer = CustomerAuth.objects.get(id=customer_id)
-        location = CustomerLocation.objects.create(customer=customer, **validated_data)
+        # customer_id = validated_data.pop('customer_id')
+        # customer = CustomerAuth.objects.get(user__id=customer_id)
+        location = CustomerLocation.objects.create(**validated_data)
         return location
+
+    def update(self, instance, validated_data):
+        customer_id = validated_data.pop('customer_id', None)
+        if customer_id:
+            customer = CustomerAuth.objects.get(user__id=customer_id)
+            instance.customer = customer
+        instance.latitude = validated_data.get('latitude', instance.latitude)
+        instance.longitude = validated_data.get('longitude', instance.longitude)
+        instance.save()
+        return instance
+
+
 
 class VendorCompleteProfileSerializer(serializers.ModelSerializer):
     vendor_id = serializers.IntegerField(write_only=True)
@@ -90,7 +104,7 @@ class VendorCompleteProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         vendor_id = validated_data.pop('vendor_id')
-        vendor = VendorAuth.objects.get(id=vendor_id)
+        vendor = VendorAuth.objects.get(user__id=vendor_id)
         profile = VendorCompleteProfile.objects.create(vendor=vendor, **validated_data)
         return profile
     
@@ -102,9 +116,7 @@ class VendorLocationSerializer(serializers.ModelSerializer):
         fields = ['vendor_id', 'latitude', 'longitude']
 
     def create(self, validated_data):
-        vendor_id = validated_data.pop('vendor_id')
-        vendor = VendorAuth.objects.get(id=vendor_id)
-        location = VendorLocation.objects.create(vendor=vendor, **validated_data)
+        location = VendorLocation.objects.create(**validated_data)
         return location
 
 class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
@@ -117,8 +129,8 @@ class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
 
 class PickupRequestSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
-    customer_name = serializers.ReadOnlyField(source='customer.name')
-    customer_email = serializers.ReadOnlyField(source='customer.email')
+    customer_name = serializers.ReadOnlyField(source='customer.user.name')
+    customer_email = serializers.ReadOnlyField(source='customer.user.email')
     customer_mobile_no = serializers.ReadOnlyField(source='customer.mobile_no')
     vendor_id = serializers.ReadOnlyField(source='vendor.id')
     vendor_name = serializers.ReadOnlyField(source='vendor.name')
@@ -134,6 +146,10 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         return request
 
 class VendorDetailsSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id')
+    name = serializers.CharField(source='user.name')
+    email = serializers.EmailField(source='user.email')
+
     class Meta:
         model = VendorAuth
         fields = ['id', 'name', 'email', 'mobile_no']        
