@@ -14,6 +14,7 @@ from pathlib import Path
 import environ
 import os
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "trashapi"
@@ -90,6 +91,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -171,6 +173,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -192,6 +196,8 @@ CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify all
 #     'http://192.168.1.2:8000',  # Replace with your server's IP
 #     'http://localhost:8000',
 # ]
+
+ALLOWED_HOSTS = ['trashandler-api-s-11.onrender.com', 'trashandler-api-s-12.onrender.com']
 
 CORS_ALLOW_METHODS = [
     'GET',
