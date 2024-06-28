@@ -34,8 +34,14 @@ customer_location_router.register(r'cust_location', CustomerLocationViewSet, bas
 vendor_complete_profile_router = routers.SimpleRouter()
 vendor_complete_profile_router.register(r'vendor-complete-profile', VendorCompleteProfileViewSet, basename='vendor-complete-profile')
 
+#nearest_vendor_router = routers.SimpleRouter()
+#nearest_vendor_router.register(r'nearest-vendor', NearestVendorViewSet, basename='nearest-vendor')
+
 vendor_notification_router = routers.SimpleRouter()
 vendor_notification_router.register(r'pickup-request', PickupRequestViewSet, basename='pickup-request')
+
+#update_status_router = routers.SimpleRouter()
+#update_status_router.register(r'pickup-request-status', PickupRequestStatusUpdateViewSet, basename='pickup-request-status')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -50,15 +56,14 @@ urlpatterns = [
     path('', include(customer_signin_router.urls)),
     path('', include(vendor_complete_profile_router.urls)),
     path('', include(vendor_status_router.urls)),
+    #path('', include(nearest_vendor_router.urls)),
     path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('', include(vendor_notification_router.urls)),
-    path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('update-pickup-request-status/', UpdatePickupRequestStatusView.as_view(), name='update-pickup-request-status'),
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
     path('reject-and-reassign-pickup-request/', RejectAndReassignPickupRequestView.as_view(), name='reject-and-reassign-pickup-request'),
     path('customer/reject-pickup-request/', CustomerRejectPickupRequestView.as_view(), name='customer-reject-pickup-request'),
-    
 ]
 
 if settings.DEBUG:
