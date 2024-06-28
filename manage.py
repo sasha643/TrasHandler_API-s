@@ -6,12 +6,14 @@ import sys
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'trashapi.settings')
-
-    # Insert superuser creation code
     try:
+        import django
         from django.core.management import execute_from_command_line
+        from django.db.utils import OperationalError
+
         # Only create superuser if running the server or specified command
         if 'runserver' in sys.argv or 'createsuperuser' in sys.argv:
+            django.setup()
             from django.contrib.auth.models import User
 
             # Parameters for the superuser
@@ -19,12 +21,18 @@ def main():
             email = 'TrasHandler@gmail.com'
             password = 'Scrap@123'
 
-            # Create superuser if it doesn't exist
-            if not User.objects.filter(username=username).exists():
-                User.objects.create_superuser(username, email, password)
-                print(f"Superuser '{username}' created successfully.")
-            else:
-                print(f"Superuser '{username}' already exists.")
+            try:
+                # Ensure migrations are applied before creating superuser
+                execute_from_command_line(['manage.py', 'migrate'])
+
+                # Create superuser if it doesn't exist
+                if not User.objects.filter(username=username).exists():
+                    User.objects.create_superuser(username, email, password)
+                    print(f"Superuser '{username}' created successfully.")
+                else:
+                    print(f"Superuser '{username}' already exists.")
+            except OperationalError as e:
+                print(f"Error during superuser creation: {e}")
     except ImportError as exc:
         raise ImportError(
             "Couldn't import Django. Are you sure it's installed and "
