@@ -7,12 +7,46 @@ class CustomerAuthSerializer(serializers.ModelSerializer):
         model = CustomerAuth
         fields = '__all__'
 
+    def create(self, validated_data):
+        email = validated_data.get('email')
+        mobile_no = validated_data.get('mobile_no')
+
+        if CustomerAuth.objects.filter(email=email).exists() or CustomerAuth.objects.filter(mobile_no=mobile_no).exists():
+            raise serializers.ValidationError("account with credentials already exists, try logging in")
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        email = validated_data.get('email', instance.email)
+        mobile_no = validated_data.get('mobile_no', instance.mobile_no)
+
+        if CustomerAuth.objects.filter(email=email).exclude(pk=instance.pk).exists() or CustomerAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
+            raise serializers.ValidationError("account with credentials already exists, try logging in")
+
+        return super().update(instance, validated_data)
 
 class VendorAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorAuth
         fields = '__all__'
-        
+
+    def create(self, validated_data):
+        email = validated_data.get('email')
+        mobile_no = validated_data.get('mobile_no')
+
+        if VendorAuth.objects.filter(email=email).exists() or VendorAuth.objects.filter(mobile_no=mobile_no).exists():
+            raise serializers.ValidationError("account with this credentials already exists, try logging in")
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        email = validated_data.get('email', instance.email)
+        mobile_no = validated_data.get('mobile_no', instance.mobile_no)
+
+        if VendorAuth.objects.filter(email=email).exclude(pk=instance.pk).exists() or VendorAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
+            raise serializers.ValidationError("account with this credentials already exists, try logging in")
+
+        return super().update(instance, validated_data)        
 
 class VendorSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
@@ -54,6 +88,7 @@ class VendorCompleteProfileSerializer(serializers.ModelSerializer):
         vendor = VendorAuth.objects.get(id=vendor_id)
         profile = VendorCompleteProfile.objects.create(vendor=vendor, **validated_data)
         return profile
+
     
 class VendorLocationSerializer(serializers.ModelSerializer):
     vendor_id = serializers.IntegerField(write_only=True)
@@ -75,6 +110,7 @@ class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorLocation
         fields = ['vendor_id', 'is_active']
+        
 
 class PickupRequestSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
