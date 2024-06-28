@@ -7,7 +7,7 @@ User = get_user_model()
 
 class CustomerAuth(models.Model):
     name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True, blank=True)
+    email = models.EmailField(blank=True)
     mobile_no = models.CharField(max_length=15)
 
     def __str__(self):
@@ -15,7 +15,7 @@ class CustomerAuth(models.Model):
 
 class VendorAuth(models.Model):
     name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True, blank=True)
+    email = models.EmailField(blank=True)
     mobile_no = models.CharField(max_length=15)
 
     def __str__(self):
@@ -42,7 +42,7 @@ class CustomerLocation(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
-    is_active = models.BooleanField(default=False)
+    #timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'{self.customer.name} - {self.latitude}, {self.longitude}'
@@ -65,7 +65,7 @@ class VendorLocation(models.Model):
 
     def __str__(self):
         return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
-
+    
 class PickupRequest(models.Model):
     STATUS_CHOICES = [
         ('Request Sent', 'Request Sent'),
@@ -86,5 +86,3 @@ class PickupRequest(models.Model):
 
     def get_rejected_vendors(self):
         return ", ".join([vendor.name for vendor in self.rejected_vendors.all()])
-
-
