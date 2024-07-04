@@ -7,21 +7,38 @@ class CustomerAuthSerializer(serializers.ModelSerializer):
         model = CustomerAuth
         fields = '__all__'
 
+    def validate(self, data):
+        email = data.get('email', None)
+        mobile_no = data.get('mobile_no')
+
+        if email is None or email == '':
+            email = "Not Provided"
+        data['email'] = email
+
+        if self.instance:
+            # When updating, exclude the current instance from uniqueness checks
+            if (email != 'Not Provided' and CustomerAuth.objects.filter(email=email).exclude(pk=self.instance.pk).exists()) or CustomerAuth.objects.filter(mobile_no=mobile_no).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError("Account with these credentials already exists, try logging in")
+        else:
+            # When creating, ensure no existing records have the same email or mobile number
+            if (email != 'Not Provided' and CustomerAuth.objects.filter(email=email).exists()) or CustomerAuth.objects.filter(mobile_no=mobile_no).exists():
+                raise serializers.ValidationError("Account with these credentials already exists, try logging in")
+
+        return data
+
     def create(self, validated_data):
-        email = validated_data.get('email')
-        mobile_no = validated_data.get('mobile_no')
-
-        if CustomerAuth.objects.filter(email=email).exists() or CustomerAuth.objects.filter(mobile_no=mobile_no).exists():
-            raise serializers.ValidationError("account with credentials already exists, try logging in")
-
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         email = validated_data.get('email', instance.email)
         mobile_no = validated_data.get('mobile_no', instance.mobile_no)
 
-        if CustomerAuth.objects.filter(email=email).exclude(pk=instance.pk).exists() or CustomerAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
-            raise serializers.ValidationError("account with credentials already exists, try logging in")
+        if email is None or email == '':
+            email = "Not Provided"
+        validated_data['email'] = email
+
+        if (email != 'Not Provided' and CustomerAuth.objects.filter(email=email).exclude(pk=instance.pk).exists()) or CustomerAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
+            raise serializers.ValidationError("Account with these credentials already exists, try logging in")
 
         return super().update(instance, validated_data)
 
@@ -30,23 +47,41 @@ class VendorAuthSerializer(serializers.ModelSerializer):
         model = VendorAuth
         fields = '__all__'
 
+    def validate(self, data):
+        email = data.get('email', None)
+        mobile_no = data.get('mobile_no')
+
+        if email is None or email == '':
+            email = "Not Provided"
+        data['email'] = email
+
+        if self.instance:
+            # When updating, exclude the current instance from uniqueness checks
+            if (email != 'Not Provided' and VendorAuth.objects.filter(email=email).exclude(pk=self.instance.pk).exists()) or VendorAuth.objects.filter(mobile_no=mobile_no).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError("Account with these credentials already exists, try logging in")
+        else:
+            # When creating, ensure no existing records have the same email or mobile number
+            if (email != 'Not Provided' and VendorAuth.objects.filter(email=email).exists()) or VendorAuth.objects.filter(mobile_no=mobile_no).exists():
+                raise serializers.ValidationError("Account with these credentials already exists, try logging in")
+
+        return data
+
     def create(self, validated_data):
-        email = validated_data.get('email')
-        mobile_no = validated_data.get('mobile_no')
-
-        if VendorAuth.objects.filter(email=email).exists() or VendorAuth.objects.filter(mobile_no=mobile_no).exists():
-            raise serializers.ValidationError("account with this credentials already exists, try logging in")
-
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         email = validated_data.get('email', instance.email)
         mobile_no = validated_data.get('mobile_no', instance.mobile_no)
 
-        if VendorAuth.objects.filter(email=email).exclude(pk=instance.pk).exists() or VendorAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
-            raise serializers.ValidationError("account with this credentials already exists, try logging in")
+        if email is None or email == '':
+            email = "Not Provided"
+        validated_data['email'] = email
 
-        return super().update(instance, validated_data)        
+        if (email != 'Not Provided' and VendorAuth.objects.filter(email=email).exclude(pk=instance.pk).exists()) or VendorAuth.objects.filter(mobile_no=mobile_no).exclude(pk=instance.pk).exists():
+            raise serializers.ValidationError("Account with these credentials already exists, try logging in")
+
+        return super().update(instance, validated_data)
+      
 
 class VendorSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
