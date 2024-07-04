@@ -7,7 +7,7 @@ User = get_user_model()
 
 class CustomerAuth(models.Model):
     name = models.CharField(max_length=255)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(blank=True, null=True, default=None)
     mobile_no = models.CharField(max_length=15)
 
     def __str__(self):
@@ -15,7 +15,7 @@ class CustomerAuth(models.Model):
 
 class VendorAuth(models.Model):
     name = models.CharField(max_length=255)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(blank=True, null=True, default=None)
     mobile_no = models.CharField(max_length=15)
 
     def __str__(self):
