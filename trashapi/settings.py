@@ -167,7 +167,7 @@ CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify all
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['trashandler-api-s-14.onrender.com', 'trashandler-api-s-15.onrender.com', 'trashandler-api-s-17.onrender.com']
+ALLOWED_HOSTS = ['trashandler-api-s-14.onrender.com', 'trashandler-api-s-15.onrender.com', 'trashandler-api-s-18.onrender.com']
 
 CORS_ALLOW_METHODS = [
     'GET',
