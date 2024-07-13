@@ -4,13 +4,13 @@ from .models import *
 # Register your models here.
 
 class CustomerAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = ['id', 'name', 'email', 'mobile_no', 'token']
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = ['id', 'name', 'email', 'mobile_no', 'token']
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'photo', 'description', 'landmark', 'time_slot']
+    list_display = ['id','customer', 'photo', 'description', 'landmark', 'time_slot']
 
 class CustomerLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'latitude', 'longitude']
