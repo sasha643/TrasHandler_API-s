@@ -3,17 +3,24 @@ from rest_framework import viewsets, mixins, generics
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
+from .authentication import TokenAuthentication
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+import base64
+import os
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from .models import *
 from .serializers import *
+from.permissions import IsAuthenticatedOrVendor
 from .functions import *
 
 # Create your views here.
 
-User = get_user_model()
+key = base64.b64decode('BdCCDDyv9PMQsjMVDmWNoQ==')
+iv = base64.b64decode('S1t4BPeDq9MPgUQA3ly5mw==')  
 
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()
@@ -78,9 +85,13 @@ class VendorSigninViewSet(viewsets.GenericViewSet):
 
         try:
             vendor_auth = VendorAuth.objects.get(mobile_no=mobile_no)
-            name = vendor_auth.name  # Get the name from the VendorAuth object
-            vendor_id = vendor_auth.id  # Get the id from the VendorAuth object
-            return Response({"message": "Login successful", "Welcome": name, "vendor_id": vendor_id}, status=status.HTTP_200_OK)
+            name = vendor_auth.name 
+            vendor_id = vendor_auth.id  
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            ct_bytes = cipher.encrypt(pad(vendor_auth.token.encode(), AES.block_size))
+            encrypted_token = base64.b64encode(ct_bytes).decode('utf-8')
+           
+            return Response({"message": "Login successful", "Welcome": name, "vendor_id": vendor_id, "token":encrypted_token}, status=status.HTTP_200_OK)
         except VendorAuth.DoesNotExist:
             return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
     
@@ -89,8 +100,9 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     Handle uploading photos
     """
-    permission_classes = [AllowAny]
     serializer_class = PhotoUploadSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
     queryset = PhotoUpload.objects.all()
 
     def perform_create(self, serializer):
@@ -109,7 +121,10 @@ class CustomerSigninViewSet(viewsets.GenericViewSet):
         try:
             customer_auth = CustomerAuth.objects.get(mobile_no=mobile_no)
             name = customer_auth.name
-            return Response({"message": "Login successful", "Welcome": name, "customer_id": customer_auth.id}, status=status.HTTP_200_OK)
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            ct_bytes = cipher.encrypt(pad(customer_auth.token.encode(), AES.block_size))
+            encrypted_token = base64.b64encode(ct_bytes).decode('utf-8')
+            return Response({"message": "Login successful", "Welcome": name, "customer_id": customer_auth.id, "token": encrypted_token}, status=status.HTTP_200_OK)
         except CustomerAuth.DoesNotExist:
             return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
         
@@ -117,7 +132,8 @@ class CustomerSigninViewSet(viewsets.GenericViewSet):
 class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = CustomerLocation.objects.all()
     serializer_class = CustomerLocationSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def create(self, request, *args, **kwargs):
         customer_id = request.data.get('customer_id')
@@ -156,7 +172,8 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorCompleteProfile.objects.all()
     serializer_class = VendorCompleteProfileSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def create(self, request, *args, **kwargs):
         vendor_id = request.data.get('vendor_id')
@@ -195,7 +212,8 @@ class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMi
 class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def create(self, request, *args, **kwargs):
         vendor_id = request.data.get('vendor_id')
@@ -234,7 +252,8 @@ class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationStatusUpdateSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def update_status(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -261,7 +280,8 @@ class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
         
 
 class VendorProfileDetailView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def get(self, request, vendor_id, *args, **kwargs):
         try:
@@ -275,7 +295,8 @@ class VendorProfileDetailView(APIView):
 class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = PickupRequest.objects.all()
     serializer_class = PickupRequestSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -324,7 +345,8 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
 
 class VendorPickupRequestView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def get(self, request, vendor_id, *args, **kwargs):
         try:
@@ -355,7 +377,8 @@ class VendorPickupRequestView(APIView):
 
 class UpdatePickupRequestStatusView(generics.GenericAPIView):
     serializer_class = UpdatePickupRequestStatusSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -383,7 +406,8 @@ class UpdatePickupRequestStatusView(generics.GenericAPIView):
         
 
 class CustomerPickupRequestView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def get(self, request, customer_id, *args, **kwargs):
         try:
@@ -406,8 +430,9 @@ class CustomerPickupRequestView(APIView):
     
 
 class RejectAndReassignPickupRequestView(APIView):
-    permission_classes = [AllowAny]
     serializer_class = RejectAndReassignPickupRequestSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -460,7 +485,8 @@ class RejectAndReassignPickupRequestView(APIView):
         
 class CustomerRejectPickupRequestView(generics.GenericAPIView):
     serializer_class = RejectPickupRequestSerializer  
-    permission_classes = [AllowAny]  
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]  
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
