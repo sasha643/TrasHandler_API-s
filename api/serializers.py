@@ -5,7 +5,7 @@ from .models import *
 class CustomerAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAuth
-        fields = '__all__'
+        fields = ['id', 'name', 'mobile_no', 'email']
 
     def validate(self, data):
         email = data.get('email', None)
@@ -45,7 +45,7 @@ class CustomerAuthSerializer(serializers.ModelSerializer):
 class VendorAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorAuth
-        fields = '__all__'
+        fields = ['id', 'name', 'mobile_no', 'email']
 
     def validate(self, data):
         email = data.get('email', None)
@@ -88,8 +88,8 @@ class VendorSigninSerializer(serializers.Serializer):
 
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
-
+    customer_id = serializers.IntegerField(write_only=True)
+    
     class Meta:
         model = PhotoUpload
         fields = '__all__'
