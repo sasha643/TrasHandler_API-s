@@ -1,14 +1,14 @@
 from django.db import models
-from django.contrib.auth import get_user_model
+#from django.contrib.auth import get_user_model
 import uuid
 
-User = get_user_model()
-
+#User = get_user_model()
 
 class CustomerAuth(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(blank=True, null=True, default=None)
     mobile_no = models.CharField(max_length=15)
+    token = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f'{self.name}'
@@ -17,6 +17,7 @@ class VendorAuth(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(blank=True, null=True, default=None)
     mobile_no = models.CharField(max_length=15)
+    token = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f'{self.name}'
@@ -29,7 +30,8 @@ class PhotoUpload(models.Model):
         ('night', 'Night'),
     ]
 
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    #user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     photo = models.ImageField(upload_to='photos/')
     description = models.TextField()
     landmark = models.CharField(max_length=255)
@@ -42,7 +44,6 @@ class CustomerLocation(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
-    #timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'{self.customer.name} - {self.latitude}, {self.longitude}'
