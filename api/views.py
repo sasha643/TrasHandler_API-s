@@ -1,22 +1,27 @@
-from django.shortcuts import render
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import viewsets, mixins, generics
 from rest_framework.response import Response
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.exceptions import ValidationError
-from rest_framework.authtoken.models import Token
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
-from django.contrib.auth import authenticate
+
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
 from .models import *
 from .serializers import *
 from django.conf import settings
-from haversine import haversine
+from .functions import *
+from .permissions import *
+
+
 
 # Create your views here.
 
 User = get_user_model()
+
 
 class CustomerAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
@@ -27,25 +32,31 @@ class VendorAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = VendorAuthRegisterSerializer
 
-
+    
 class CustomerSigninView(APIView):
     permission_classes = [AllowAny]
     serializer_class = CustomerSigninSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            mobile_no = serializer.validated_data['mobile_no']
-            user = authenticate(request, mobile_no=mobile_no, is_customer=True)
-            if user:
-                try:
-                    customer = CustomerAuth.objects.get(user=user)
-                    token, created = Token.objects.get_or_create(user=user)
-                    return Response({'token': token.key, 'message': 'Login successful', 'customer_id': customer.user.id, 'name': customer.user.name})
-                except CustomerAuth.DoesNotExist:
-                    return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
-            return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+
+        phone_number = serializer.validated_data['phone_number']
+        user = authenticate(request, phone_number=phone_number)
+
+        if user:
+            try:
+                customer = CustomerAuth.objects.get(id=user.id)
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'message': 'Login successful',
+                    'name': user.name,
+                    'id': user.id,
+                    'access': str(refresh.access_token),
+                }, status=status.HTTP_200_OK)
+            except CustomerAuth.DoesNotExist:
+                return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
 
 class VendorSigninView(APIView):
     permission_classes = [AllowAny]
@@ -53,23 +64,28 @@ class VendorSigninView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            mobile_no = serializer.validated_data['mobile_no']
-            user = authenticate(request, mobile_no=mobile_no, is_customer=False)
-            if user:
-                try:
-                    vendor = VendorAuth.objects.get(user=user)
-                    token, created = Token.objects.get_or_create(user=user)
-                    return Response({'token': token.key, 'message': 'Login successful', 'vendor_id': vendor.user.id, 'name': vendor.user.name})
-                except VendorAuth.DoesNotExist:
-                    return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
-            return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
+        phone_number = serializer.validated_data['phone_number']
+        user = authenticate(request, phone_number=phone_number)
+
+        if user:
+            try:
+                vendor = VendorAuth.objects.get(id=user.id)
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'message': 'Login successful',
+                    'name': user.name,
+                    'id': user.id,
+                    'access': str(refresh.access_token),
+                }, status=status.HTTP_200_OK)
+            except CustomerAuth.DoesNotExist:
+                return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()
     serializer_class = CustomerAuthSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -95,7 +111,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
 class VendorAuthViewSet(viewsets.GenericViewSet):
     queryset = VendorAuth.objects.all()
     serializer_class = VendorAuthSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -118,24 +134,6 @@ class VendorAuthViewSet(viewsets.GenericViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class VendorSigninViewSet(viewsets.GenericViewSet):
-    serializer_class = VendorSigninSerializer
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        mobile_no = serializer.validated_data['mobile_no']
-
-        try:
-            vendor_auth = VendorAuth.objects.get(mobile_no=mobile_no)
-            name = vendor_auth.name  # Get the name from the VendorAuth object
-            vendor_id = vendor_auth.id  # Get the id from the VendorAuth object
-            return Response({"message": "Login successful", "Welcome": name, "vendor_id": vendor_id}, status=status.HTTP_200_OK)
-        except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-
 class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     Handle uploading photos
@@ -147,97 +145,87 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    
-class CustomerSigninViewSet(viewsets.GenericViewSet):
-    serializer_class = CustomerSigninSerializer
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        mobile_no = serializer.validated_data['mobile_no']
-
-        try:
-            customer_auth = CustomerAuth.objects.get(mobile_no=mobile_no)
-            name = customer_auth.name
-            return Response({"message": "Login successful", "Welcome": name, "customer_id": customer_auth.id}, status=status.HTTP_200_OK)
-        except CustomerAuth.DoesNotExist:
-            return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        
 
 class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     queryset = CustomerLocation.objects.all()
     serializer_class = CustomerLocationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        customer_id = serializer.validated_data['customer_id']
-        customer = CustomerAuth.objects.get(user__id=customer_id)
+        
+        try:
+            customer = CustomerAuth.objects.get(id=request.user.id)
+        except CustomerAuth.DoesNotExist:
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        
         location = serializer.save(customer=customer)
         response_data = self.get_serializer(location).data
-        response_data['name'] = customer.user.name
+        response_data['id'] = customer.id
+        
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        customer_id = serializer.validated_data.pop('customer_id', None)
-        if customer_id:
-            customer = CustomerAuth.objects.get(user__id=customer_id)
-            location = serializer.save(customer=customer)
-        else:
-            location = serializer.save()
+        
+        try:
+            customer = CustomerAuth.objects.get(id=request.user.id)
+        except CustomerAuth.DoesNotExist:
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        location = serializer.save(customer=customer)
         response_data = self.get_serializer(location).data
-        response_data['name'] = location.customer.user.name
+        response_data['name'] = location.customer.name
+        
         return Response(response_data)
 
     def perform_create(self, serializer):
-        customer_id = serializer.validated_data.pop('customer_id')
-        customer = CustomerAuth.objects.get(user__id=customer_id)
+        try:
+            customer = CustomerAuth.objects.get(id=self.request.user.id)
+        except CustomerAuth.DoesNotExist:
+            raise serializers.ValidationError({'error': 'Customer not found'})
+        
         if serializer.validated_data.get('is_active'):
             CustomerLocation.objects.filter(customer=customer, is_active=True).update(is_active=False)
         serializer.save(customer=customer)
 
-    def perform_update(self, serializer, customer=None):
-        if customer:
-            serializer.save(customer=customer)
-        else:
-            serializer.save()
+    def perform_update(self, serializer):
+        try:
+            customer = CustomerAuth.objects.get(id=self.request.user.id)
+        except CustomerAuth.DoesNotExist:
+            raise serializers.ValidationError({'error': 'Customer not found'})
+        
         if serializer.validated_data.get('is_active'):
             CustomerLocation.objects.filter(customer=serializer.instance.customer, is_active=True).update(is_active=False)
-
-
-
+        serializer.save(customer=customer)
 
 
 class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorCompleteProfile.objects.all()
     serializer_class = VendorCompleteProfileSerializer
-    permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        vendor_id = request.data.get('vendor_id')
-        if not vendor_id:
-            return Response({"error": "Vendor ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            vendor = VendorAuth.objects.get(user__id=vendor_id)
+            vendor = VendorAuth.objects.get(id=request.user.id)
         except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        data = request.data.copy()
+        data['vendor'] = vendor.id
+        
         try:
             vendor_complete_profile = VendorCompleteProfile.objects.get(vendor=vendor)
             # If an entry exists, update it
-            serializer = self.get_serializer(vendor_complete_profile, data=request.data, partial=True)
+            serializer = self.get_serializer(vendor_complete_profile, data=data, partial=True)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
         except VendorCompleteProfile.DoesNotExist:
             # If no entry exists, create a new one
-            data = request.data.copy()
-            data['vendor'] = vendor.user.id
             serializer = self.get_serializer(data=data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -255,61 +243,72 @@ class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMi
 class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        vendor_id = serializer.validated_data['vendor_id']
-        vendor = VendorAuth.objects.get(user__id=vendor_id)
+        
+        try:
+            vendor = VendorAuth.objects.get(id=request.user.id)
+        except VendorAuth.DoesNotExist:
+            return Response({'error': 'Vendor not found'}, status=status.HTTP_404_NOT_FOUND)
+
         location = serializer.save(vendor=vendor)
         response_data = self.get_serializer(location).data
-        response_data['name'] = vendor.user.name
+        response_data['id'] = vendor.id
+        
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        vendor_id = serializer.validated_data.pop('vendor_id', None)
-        if vendor_id:
-            vendor = VendorAuth.objects.get(user__id=vendor_id)
-            location = serializer.save(vendor=vendor)
-        else:
-            location = serializer.save()
+        
+        try:
+            vendor = VendorAuth.objects.get(id=request.user.id)
+        except VendorAuth.DoesNotExist:
+            return Response({'error': 'Vendor not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        location = serializer.save(vendor=vendor)
         response_data = self.get_serializer(location).data
         response_data['name'] = location.vendor.user.name
+        
         return Response(response_data)
 
     def perform_create(self, serializer):
-        vendor_id = serializer.validated_data.pop('vendor_id')
-        vendor = VendorAuth.objects.get(user__id=vendor_id)
+        try:
+            vendor = VendorAuth.objects.get(id=self.request.user.id)
+        except VendorAuth.DoesNotExist:
+            raise serializers.ValidationError({'error': 'Vendor not found'})
+        
         if serializer.validated_data.get('is_active'):
             VendorLocation.objects.filter(vendor=vendor, is_active=True).update(is_active=False)
         serializer.save(vendor=vendor)
 
-    def perform_update(self, serializer, vendor=None):
-        if vendor:
-            serializer.save(vendor=vendor)
-        else:
-            serializer.save()
+    def perform_update(self, serializer):
+        try:
+            vendor = VendorAuth.objects.get(id=self.request.user.id)
+        except VendorAuth.DoesNotExist:
+            raise serializers.ValidationError({'error': 'Vendor not found'})
+        
         if serializer.validated_data.get('is_active'):
             VendorLocation.objects.filter(vendor=serializer.instance.vendor, is_active=True).update(is_active=False)
+        serializer.save(vendor=vendor)
 
 
 class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationStatusUpdateSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def update_status(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        vendor_id = serializer.validated_data['vendor_id']
         is_active = serializer.validated_data['is_active']
 
         try:
-            vendor = VendorAuth.objects.get(user__id=vendor_id)
+            vendor = VendorAuth.objects.get(id=request.user.id)
         except VendorAuth.DoesNotExist:
             return Response({"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -324,10 +323,9 @@ class VendorStatusUpdateViewSet(viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         return self.update_status(request, *args, **kwargs)
-        
 
 class VendorProfileDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, vendor_id, *args, **kwargs):
         try:
@@ -341,20 +339,19 @@ class VendorProfileDetailView(APIView):
 class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = PickupRequest.objects.all()
     serializer_class = PickupRequestSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        customer_id = serializer.validated_data['customer_id']
         latitude = serializer.validated_data['latitude']
         longitude = serializer.validated_data['longitude']
 
         try:
-            customer = CustomerAuth.objects.get(user__id=customer_id)
+            customer = CustomerAuth.objects.get(id=request.user.id)
         except CustomerAuth.DoesNotExist:
-            return Response({"error": "Customer profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Filter vendors where is_active is True
         active_vendors = VendorLocation.objects.filter(is_active=True)
@@ -362,9 +359,7 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         nearest_vendor = None
 
         for vendor in active_vendors:
-            vendor_coord = (float(vendor.latitude), float(vendor.longitude))
-            norm_coords = (float(latitude), float(longitude))
-            distance = haversine(norm_coords, vendor_coord)
+            distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
             if distance < min_distance:
                 min_distance = distance
                 nearest_vendor = vendor
@@ -392,13 +387,13 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
 
 class VendorPickupRequestView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request, vendor_id, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         try:
-            vendor = VendorAuth.objects.get(user__id=vendor_id)
+            vendor = VendorAuth.objects.get(id=request.user.id)
         except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
         pickup_requests = PickupRequest.objects.filter(vendor=vendor)
         if not pickup_requests.exists():
@@ -407,14 +402,14 @@ class VendorPickupRequestView(APIView):
         pickup_requests_data = []
         for request in pickup_requests:
             request_data = {
-                "customer_id": request.customer.user.id,
-                "customer_name": request.customer.user.name,
-                "customer_mobile_no": request.customer.mobile_no,
+                "customer_id": request.customer.id,
+                "customer_name": request.customer.name,
+                "customer_phone_number": request.customer.phone_number,
                 "latitude": request.latitude,
                 "longitude": request.longitude,
                 "pickup_request_id": request.id,
                 "status": request.status,
-                # "remarks": request.remarks,  # Include remarks field
+                "remarks": request.remarks,  # Include remarks field
             }
             pickup_requests_data.append(request_data)
 
@@ -423,17 +418,16 @@ class VendorPickupRequestView(APIView):
 
 class UpdatePickupRequestStatusView(generics.GenericAPIView):
     serializer_class = UpdatePickupRequestStatusSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            vendor_id = serializer.validated_data['vendor_id']
             pickup_request_id = serializer.validated_data['pickup_request_id']
             new_status = serializer.validated_data['status']
 
             try:
-                vendor = VendorAuth.objects.get(user__id=vendor_id)
+                vendor = VendorAuth.objects.get(id=request.user.id)
             except VendorAuth.DoesNotExist:
                 return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -451,11 +445,16 @@ class UpdatePickupRequestStatusView(generics.GenericAPIView):
         
 
 class CustomerPickupRequestView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request, customer_id, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         try:
-            pickup_request = PickupRequest.objects.get(customer_id=customer_id, status='Accepted')
+            customer = CustomerAuth.objects.get(id=request.user.id)
+        except CustomerAuth.DoesNotExist:
+            return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            pickup_request = PickupRequest.objects.get(customer=customer, status='Accepted')
         except PickupRequest.DoesNotExist:
             return Response({"error": "No accepted pickup requests found for the provided customer"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -473,3 +472,82 @@ class CustomerPickupRequestView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
     
 
+class RejectAndReassignPickupRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RejectAndReassignPickupRequestSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        pickup_request_id = serializer.validated_data['pickup_request_id']
+
+        try:
+            vendor = VendorAuth.objects.get(id=request.user.id)
+        except VendorAuth.DoesNotExist:
+            return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            pickup_request = PickupRequest.objects.get(id=pickup_request_id, vendor=vendor)
+        except PickupRequest.DoesNotExist:
+            return Response({"error": "Pickup request not found for the provided ID and vendor"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Mark the current vendor as having rejected the request
+        pickup_request.status = 'Rejected'
+        pickup_request.rejected_vendors.add(vendor)
+        pickup_request.save()
+
+        # Find the next nearest active vendor who has not rejected the request
+        customer_location = (pickup_request.latitude, pickup_request.longitude)
+        active_vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all()).filter(is_active=True)
+        min_distance = float('inf')
+        nearest_vendor = None
+
+        for vendor_location in active_vendors:
+            distance = haversine(
+                customer_location[0], customer_location[1],
+                vendor_location.latitude, vendor_location.longitude
+            )
+            if distance < min_distance:
+                min_distance = distance
+                nearest_vendor = vendor_location.vendor
+
+        if nearest_vendor:
+            pickup_request.vendor = nearest_vendor
+            pickup_request.status = 'Request Sent'
+            pickup_request.save()
+
+            return Response({
+                "message": "Pickup request reassigned to the next nearest active vendor",
+                "pickup_request": PickupRequestSerializer(pickup_request).data,
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "No other active vendors available"}, status=status.HTTP_404_NOT_FOUND)
+        
+class CustomerRejectPickupRequestView(generics.GenericAPIView):
+    serializer_class = RejectPickupRequestSerializer  
+    permission_classes = [IsAuthenticated]  
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        pickup_request_id = serializer.validated_data['pickup_request_id']
+        remarks = serializer.validated_data.get('remarks', 'Rejected by customer')
+
+        try:
+            customer = CustomerAuth.objects.get(id=request.user.id)
+        except CustomerAuth.DoesNotExist:
+            return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            pickup_request = PickupRequest.objects.get(id=pickup_request_id, customer=customer)
+        except PickupRequest.DoesNotExist:
+            return Response({"error": "Pickup request not found for the provided ID and customer"}, status=status.HTTP_404_NOT_FOUND)
+
+        if pickup_request.status != 'Accepted':
+            return Response({"error": "This pickup request is not currently accepted by any vendor"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pickup_request.status = 'Rejected'
+        pickup_request.remarks = remarks
+        pickup_request.save()
+
+        return Response({"message": "Pickup request rejected successfully", "pickup_request": PickupRequestSerializer(pickup_request).data}, status=status.HTTP_200_OK)

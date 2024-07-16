@@ -1,10 +1,12 @@
 from rest_framework.permissions import BasePermission
 from .models import CustomerAuth, VendorAuth
 
-class IsCustomer(BasePermission):
+class IsCustomerAndAuthenticated(BasePermission):
     def has_permission(self, request, view):
-        return hasattr(request.user, 'customerauth') and isinstance(request.user.customerauth, CustomerAuth)
+        is_authenticated = bool(request.user and request.user.is_authenticated)
+        print(f'Is auth: {is_authenticated}')
+        return is_authenticated
 
-class IsVendor(BasePermission):
+class IsVendorAndAuthenticate(BasePermission):
     def has_permission(self, request, view):
-        return hasattr(request.user, 'vendorauth') and isinstance(request.user.vendorauth, VendorAuth)
+        return bool(request.user and request.user.is_authenticated and hasattr(request.user, 'vendorauth'))

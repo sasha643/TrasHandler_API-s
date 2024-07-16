@@ -1,63 +1,61 @@
+import email
+from typing import Required
 from attr import fields
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth import get_user_model
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer as BaseTokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from rest_framework.exceptions import AuthenticationFailed
+from .models import CustomUser
 
 
 User = get_user_model()
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('name', 'email')
 
-    def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
 
 class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
 
     class Meta:
         model = CustomerAuth
-        fields = ('user', 'mobile_no')
+        fields = ('name', 'email', 'phone_number')
+        
 
     def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create_user(**user_data)
-        customer_auth = CustomerAuth.objects.create(user=user, **validated_data)
+        customer_auth = CustomerAuth.objects.create_user(**validated_data)
         return customer_auth
 
+class PhoneNumberSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+
+
 class VendorAuthRegisterSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
 
     class Meta:
         model = VendorAuth
-        fields = ('user', 'mobile_no')
+        fields = ('name', 'email', 'phone_number')
 
     def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create_user(**user_data)
-        vendor_auth = VendorAuth.objects.create(user=user, **validated_data)
+        vendor_auth = VendorAuth.objects.create(**validated_data)
         return vendor_auth
    
 class CustomerAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAuth
-        fields = '__all__'
+        fields = ('name', 'email', 'phone_number')
 
 
 class VendorAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorAuth
-        fields = '__all__'
+        fields = ('name', 'email', 'phone_number')
         
 
 class CustomerSigninSerializer(serializers.Serializer):
-    mobile_no = serializers.CharField(max_length=15)
+    phone_number = serializers.CharField(max_length=15)
 
 class VendorSigninSerializer(serializers.Serializer):
-    mobile_no = serializers.CharField(max_length=15)
+    phone_number = serializers.CharField(max_length=15)
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
@@ -67,27 +65,21 @@ class PhotoUploadSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-
 class CustomerLocationSerializer(serializers.ModelSerializer):
-    customer_id = serializers.IntegerField(write_only=True)
     latitude = serializers.FloatField()
     longitude = serializers.FloatField()
 
     class Meta:
         model = CustomerLocation
-        fields = ['customer_id', 'latitude', 'longitude']
+        fields = ['latitude', 'longitude']
 
     def create(self, validated_data):
-        # customer_id = validated_data.pop('customer_id')
-        # customer = CustomerAuth.objects.get(user__id=customer_id)
+        # Customer will be assigned in the viewset's perform_create method
         location = CustomerLocation.objects.create(**validated_data)
         return location
 
     def update(self, instance, validated_data):
-        customer_id = validated_data.pop('customer_id', None)
-        if customer_id:
-            customer = CustomerAuth.objects.get(user__id=customer_id)
-            instance.customer = customer
+        # Customer will be handled in the viewset's perform_update method
         instance.latitude = validated_data.get('latitude', instance.latitude)
         instance.longitude = validated_data.get('longitude', instance.longitude)
         instance.save()
@@ -96,52 +88,47 @@ class CustomerLocationSerializer(serializers.ModelSerializer):
 
 
 class VendorCompleteProfileSerializer(serializers.ModelSerializer):
-    vendor_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = VendorCompleteProfile
-        fields = ['vendor_id', 'gstin_number', 'business_name', 'pan_card', 'business_photos']
+        fields = ['gstin_number', 'business_name', 'pan_card', 'business_photos']
 
     def create(self, validated_data):
-        vendor_id = validated_data.pop('vendor_id')
-        vendor = VendorAuth.objects.get(user__id=vendor_id)
-        profile = VendorCompleteProfile.objects.create(vendor=vendor, **validated_data)
+        
+        profile = VendorCompleteProfile.objects.create(**validated_data)
         return profile
     
 class VendorLocationSerializer(serializers.ModelSerializer):
-    vendor_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = VendorLocation
-        fields = ['vendor_id', 'latitude', 'longitude']
+        fields = ['latitude', 'longitude']
 
     def create(self, validated_data):
         location = VendorLocation.objects.create(**validated_data)
         return location
 
 class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
-    vendor_id = serializers.IntegerField(write_only=True)
     is_active = serializers.BooleanField()
 
     class Meta:
         model = VendorLocation
-        fields = ['vendor_id', 'is_active']
+        fields = ['is_active']
 
 class PickupRequestSerializer(serializers.ModelSerializer):
-    customer_id = serializers.IntegerField(write_only=True)
     customer_name = serializers.ReadOnlyField(source='customer.user.name')
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
-    customer_mobile_no = serializers.ReadOnlyField(source='customer.mobile_no')
+    customer_phone_number = serializers.ReadOnlyField(source='customer.user.phone_number')
     vendor_id = serializers.ReadOnlyField(source='vendor.id')
     vendor_name = serializers.ReadOnlyField(source='vendor.name')
 
     class Meta:
         model = PickupRequest
-        fields = ['customer_id', 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_mobile_no']
+        fields = [ 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_phone_number']
 
     def create(self, validated_data):
-        customer_id = validated_data.pop('customer_id')
-        customer = CustomerAuth.objects.get(id=customer_id)
+        user = self.context['request'].user
+        customer = CustomerAuth.objects.get(id=user.id)
         request = PickupRequest.objects.create(customer=customer, **validated_data)
         return request
 
@@ -152,10 +139,15 @@ class VendorDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorAuth
-        fields = ['id', 'name', 'email', 'mobile_no']        
+        fields = ['id', 'name', 'email', 'phone_number']        
 
 class UpdatePickupRequestStatusSerializer(serializers.Serializer):
-    vendor_id = serializers.IntegerField()
     pickup_request_id = serializers.IntegerField()
     status = serializers.ChoiceField(choices=PickupRequest.STATUS_CHOICES)
 
+class RejectAndReassignPickupRequestSerializer(serializers.Serializer):
+    pickup_request_id = serializers.IntegerField()
+
+class RejectPickupRequestSerializer(serializers.Serializer):
+    pickup_request_id = serializers.IntegerField()
+    remarks = serializers.CharField(required=False)

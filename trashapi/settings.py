@@ -15,10 +15,12 @@ import environ
 import os
 
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "trashapi"
 env = environ.Env()
+environ.Env.read_env(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -46,10 +48,15 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'dj_rest_auth',
     'rest_framework_swagger',
     'drf_spectacular',
     'corsheaders',
+    # 'drfpasswordless',
+    'jwt_drf_passwordless',
+    'phonenumber_field',
     
 ]
 
@@ -65,16 +72,28 @@ SITE_ID = 1
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    "DEFAULT_SCHEMA_CLASS":"drf_spectacular.openapi.AutoSchema",
 }
 
+from datetime import timedelta
+# from api.authentication import custom_user_auth_rule
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+}
+
+
 ## User model
-AUTH_USER_MODEL = 'api.User'
+AUTH_USER_MODEL = 'api.CustomUser'
 
 AUTHENTICATION_BACKENDS = [
     'api.backends.MobileNoBackend',
@@ -92,6 +111,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    # 'api.middleware.AccessControlMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -121,7 +141,7 @@ WSGI_APPLICATION = 'trashapi.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Demo',
+        'NAME': 'Trial',
         'USER': 'postgres',
         'PASSWORD': 'Benyo0310',
         'HOST': 'localhost',  
@@ -181,23 +201,21 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-REST_FRAMEWORK = {
-    "DEFAULT_SCHEMA_CLASS":"drf_spectacular.openapi.AutoSchema",
-}
 
 SPECTACULAR_SETTINGS = {
     "TITLE":"API_DOCS",
 }
 
 # CORS settings
-CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify allowed origins
+# CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify allowed origins
+CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify allowed origins
 # OR specify allowed origins
 # CORS_ALLOWED_ORIGINS = [
 #     'http://192.168.1.2:8000',  # Replace with your server's IP
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['trashandler-api-s-11.onrender.com', 'trashandler-api-s-12.onrender.com']
+# ALLOWED_HOSTS = ['trashandler-api-s-11.onrender.com', 'trashandler-api-s-12.onrender.com']
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -207,3 +225,41 @@ CORS_ALLOW_METHODS = [
     'DELETE',
     'OPTIONS'
 ]
+
+# SMS settings
+# SMS_BACKEND = 'sms.backends.console.SmsBackend',
+
+# PASSWORDLESS_AUTH = {
+#     'TOKEN_'
+#     # 'PASSWORDLESS_AUTH_TYPES': ['MOBILE',],
+#     # 'PASSWORDLESS_MOBILE_NOREPLY_NUMBER': +254704802453, 
+#     # 'PASSWORDLESS_USER_MOBILE_FIELD_NAME': 'mobile'
+# }
+
+from decouple import config
+
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER')
+
+# PHONENUMBER_DEFAULT_REGION = 'IN'
+
+MOBILE_FIELD_NAME= 'phone_number'
+SMS_BACKEND= 'sms.backends.console.SmsBackend'
+# SMS_SENDERS = {
+#     'passwordless_request': 'api.sms.CustomPasswordlessSMSSender'
+# }
+
+JWT_DRF_PASSWORDLESS = {
+    'ALLOWED_PASSWORDLESS_METHODS': ['MOBILE',],
+    
+    'PHONE_NUMBER_FIELD_MAX_LENGTH': 15,
+    'ALLOW_ADMIN_AUTHENTICATION': True,
+    'SMS_TOKEN_EXPIRATION': 10,
+    'JWT_AUTH': {
+        'JWT_PAYLOAD_HANDLER': 'jwt_auth.utils.jwt_payload_handler',
+        'JWT_ENCODE_HANDLER': 'jwt_auth.utils.jwt_encode_handler',
+        'JWT_DECODE_HANDLER': 'jwt_auth.utils.jwt_decode_handler',
+        'JWT_ALLOW_REFRESH': True,
+    }
+}
