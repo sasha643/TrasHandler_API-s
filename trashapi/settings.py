@@ -11,14 +11,13 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
-import environ
 import os
-import dj_database_url
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'trashapi.settings')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "trashapi"
-env = environ.Env()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -35,6 +34,15 @@ ALLOWED_HOSTS = []
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+CELERY_BROKER_URL = 'amqp://localhost'  # URL of the RabbitMQ server
+CELERY_RESULT_BACKEND = 'django-db'  # Store task results in the Django database
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Australia/Tasmania'
+CELERY_TASK_TRACK_STARTED = True
+
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -46,7 +54,10 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'rest_framework',
     'drf_spectacular',
-    'corsheaders'
+    'corsheaders',
+    'django_celery_results',
+    'django_celery_beat',
+    'channels',
 ]
 
 
@@ -67,7 +78,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -88,7 +98,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'trashapi.wsgi.application'
+#WSGI_APPLICATION = 'trashapi.wsgi.application'
 
 
 # Database
@@ -97,16 +107,14 @@ WSGI_APPLICATION = 'trashapi.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tresh',
+        'NAME': 'New',
         'USER': 'postgres',
-        'PASSWORD': 'Saurabh@123',
+        'PASSWORD': 'Dhruv@251103',
         'HOST': 'localhost',  
         'PORT': '5432',        
     }
 }
-#DATABASES["default"]["ATOMIC_REQUESTS"] = True
-
-DATABASES['default'] = dj_database_url.parse('postgresql://trash_backend_render_user:85LPIjh4TwgKkwMrfzNCPC5JH9Q2ToOH@dpg-cpvc5hdumphs73cabsa0-a.oregon-postgres.render.com/trash_backend_render')
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -126,7 +134,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+ 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
@@ -143,8 +151,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -159,15 +165,12 @@ SPECTACULAR_SETTINGS = {
     "TITLE":"API_DOCS",
 }
 
-# CORS settings
 CORS_ORIGIN_ALLOW_ALL = True  # For development only. In production, specify allowed origins
 # OR specify allowed origins
 # CORS_ALLOWED_ORIGINS = [
 #     'http://192.168.1.2:8000',  # Replace with your server's IP
 #     'http://localhost:8000',
 # ]
-
-ALLOWED_HOSTS = ['trashandler-api-s-14.onrender.com', 'trashandler-api-s-15.onrender.com', 'trashandler-api-s-18.onrender.com']
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -177,3 +180,11 @@ CORS_ALLOW_METHODS = [
     'DELETE',
     'OPTIONS'
 ]
+
+ASGI_APPLICATION = 'trashapi.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}

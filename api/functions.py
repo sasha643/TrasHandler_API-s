@@ -1,4 +1,7 @@
 import math
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -17,3 +20,13 @@ def haversine(lat1, lon1, lat2, lon2):
 
     distance = R * c
     return distance
+
+def notify_pickup_request(self, customer_id, data):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'customer_{customer_id}',  # Group name based on customer ID
+        {
+            'type': 'pickup_request.notification',
+            'data': data,
+            }
+            )

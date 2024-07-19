@@ -16,6 +16,11 @@ from .models import *
 from .serializers import *
 from.permissions import IsAuthenticatedOrVendor
 from .functions import *
+from .consumers import *
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -295,8 +300,6 @@ class VendorProfileDetailView(APIView):
 class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = PickupRequest.objects.all()
     serializer_class = PickupRequestSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrVendor]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -330,6 +333,14 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 vendor=nearest_vendor.vendor,
                 status='Request Sent'
             )
+
+            # Notify customer about the new pickup request
+            PickupRequestConsumer.broadcast_pickup_request_update(
+                customer_id=customer_id,
+                pickup_request_id=pickup_request.id,
+                vendor_details={'name': nearest_vendor.vendor.name, 'mobile_no': nearest_vendor.vendor.mobile_no}
+            )
+
             return Response({
                 "message": "Pickup request created and assigned to the nearest active vendor",
                 "pickup_request": PickupRequestSerializer(pickup_request).data,
@@ -406,18 +417,18 @@ class UpdatePickupRequestStatusView(generics.GenericAPIView):
         
 
 class CustomerPickupRequestView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrVendor]
-
     def get(self, request, customer_id, *args, **kwargs):
         try:
+            # Fetch the accepted pickup request for the given customer
             pickup_request = PickupRequest.objects.get(customer_id=customer_id, status='Accepted')
         except PickupRequest.DoesNotExist:
             return Response({"error": "No accepted pickup requests found for the provided customer"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if the vendor is assigned
         if pickup_request.vendor is None:
             return Response({"error": "No vendor assigned to this accepted pickup request"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Serialize vendor details
         vendor = pickup_request.vendor
         serializer = VendorDetailsSerializer(vendor)
 
@@ -425,6 +436,13 @@ class CustomerPickupRequestView(APIView):
             "vendor_details": serializer.data,
             "pickup_request_id": pickup_request.id,
         }
+
+        # Broadcast the pickup request update to WebSocket clients
+        PickupRequestConsumer.broadcast_pickup_request_update(
+            customer_id=pickup_request.customer_id,
+            pickup_request_id=response_data["pickup_request_id"],
+            vendor_details=response_data["vendor_details"]
+        )
 
         return Response(response_data, status=status.HTTP_200_OK)
     
