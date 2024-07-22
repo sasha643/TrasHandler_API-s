@@ -1,3 +1,4 @@
+import asyncio
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -14,9 +15,9 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.customer_id = self.scope['url_route']['kwargs']['customer_id']
         self.authenticated_user = None
+        self.notification_task = None
         logger.debug(f"WebSocket connected for customer_id: {self.customer_id}")
         await self.accept()
-        logger.debug(f"WebSocket connected for customer_id: {self.customer_id}")
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -29,7 +30,8 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
                     f'customer_{self.customer_id}',
                     self.channel_name
                 )
-                await self.send_pickup_request_notification()
+                # Start the continuous notification task
+                self.notification_task = asyncio.create_task(self.continuous_notification_check())
                 logger.debug(f"User authenticated and added to group for customer_id: {self.customer_id}")
             except AuthenticationFailed as e:
                 await self.send(json.dumps({'error': str(e)}))
@@ -47,7 +49,9 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
                 f'customer_{self.customer_id}',
                 self.channel_name
             )
-            logger.debug(f"WebSocket disconnected for customer_id: {self.customer_id}")
+        if self.notification_task:
+            self.notification_task.cancel()  # Cancel the notification task when disconnected
+        logger.debug(f"WebSocket disconnected for customer_id: {self.customer_id}")
 
     @database_sync_to_async
     def authenticate(self, token):
@@ -69,7 +73,30 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_pickup_request(self):
-        return PickupRequest.objects.filter(customer_id=self.customer_id)
+        return PickupRequest.objects.filter(customer_id=self.customer_id, status='Accepted', notification_sent=False).first()
+
+    @database_sync_to_async
+    def mark_notification_as_sent(self, pickup_request_id):
+        pickup_request = PickupRequest.objects.get(id=pickup_request_id)
+        pickup_request.notification_sent = True
+        pickup_request.save()
+
+    async def send_pickup_request_notification(self, pickup_request):
+        if pickup_request:
+            vendor_details = await self.get_vendor_details(pickup_request.vendor_id)
+            await self.send(text_data=json.dumps({
+                'pickup_request_id': pickup_request.id,
+                'vendor_details': vendor_details
+            }))
+            logger.debug(f"Pickup request notification sent: {pickup_request.id}")
+            await self.mark_notification_as_sent(pickup_request.id)
+
+    async def continuous_notification_check(self):
+        while True:
+            pickup_request = await self.get_pickup_request()
+            if pickup_request:
+                await self.send_pickup_request_notification(pickup_request)
+            await asyncio.sleep(0.5)
 
     @database_sync_to_async
     def get_vendor_details(self, vendor_id):
@@ -79,16 +106,6 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
         except VendorAuth.DoesNotExist:
             return {'name': 'Unknown', 'mobile_no': 'Unknown'}
 
-    async def send_pickup_request_notification(self):
-        pickup_request = await self.get_pickup_request()
-        if pickup_request:
-            vendor_details = await self.get_vendor_details(pickup_request.vendor_id)
-            await self.send(text_data=json.dumps({
-                'pickup_request_id': pickup_request.id,
-                'vendor_details': vendor_details
-            }))
-            logger.debug(f"Pickup request notification sent: {pickup_request.id}")
-
     async def notify_pickup_request(self, event):
         pickup_request_id = event['pickup_request_id']
         vendor_details = event['vendor_details']
@@ -97,17 +114,3 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
             'vendor_details': vendor_details
         }))
         logger.debug(f"Pickup request update notified: {pickup_request_id}")
-
-    @classmethod
-    def broadcast_pickup_request_update(cls, customer_id, pickup_request_id, vendor_details):
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f'customer_{customer_id}',
-            {
-                'type': 'notify_pickup_request',
-                'pickup_request_id': pickup_request_id,
-                'vendor_details': vendor_details
-            }
-        )
-        logger.debug(f"Broadcasting pickup request update: {pickup_request_id} to customer_id: {customer_id}")
-
