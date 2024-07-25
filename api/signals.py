@@ -14,7 +14,7 @@ def generate_customer_token(sender, instance, created, **kwargs):
 @receiver(post_save, sender=VendorAuth)
 def generate_vendor_token(sender, instance, created, **kwargs):
     if created and not instance.token:
-        instance.token = secrets.token_urlsafe(32)
+        instance.token = secrets.token_urlsafe(52)
         instance.save()
 
 @receiver(post_save, sender=PickupRequest)
