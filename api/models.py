@@ -80,7 +80,8 @@ class PickupRequest(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
     rejected_vendors = models.ManyToManyField(VendorAuth, related_name='rejected_requests', blank=True)
-    remarks = models.CharField(max_length=255, blank=True, null=True) 
+    remarks = models.CharField(max_length=255, blank=True, null=True)
+    notification_sent = models.BooleanField(default=False) 
 
     def __str__(self):
         return f'Request by {self.customer.name} - {self.status}'
