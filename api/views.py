@@ -93,9 +93,6 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     serializer_class = PhotoUploadSerializer
     queryset = PhotoUpload.objects.all()
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
     
 class CustomerSigninViewSet(viewsets.GenericViewSet):
     serializer_class = CustomerSigninSerializer
