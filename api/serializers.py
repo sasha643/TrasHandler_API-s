@@ -19,11 +19,16 @@ class VendorSigninSerializer(serializers.Serializer):
 
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
-
+    customer_id = serializers.IntegerField(write_only=True)
     class Meta:
         model = PhotoUpload
-        fields = '__all__'
+        fields = ['customer_id', 'photo', 'description', 'landmark', 'time_slot']
+
+        def create(self, validated_data):
+            customer_id = validated_data.pop('customer_id')
+            customer = CustomerAuth.objects.get(id=customer_id)
+            profile = PhotoUpload.objects.create(customer=customer, **validated_data)
+            return profile
 
 class CustomerSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
