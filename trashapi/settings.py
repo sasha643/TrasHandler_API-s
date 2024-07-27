@@ -103,7 +103,9 @@ DATABASES = {
         'PORT': '',        
     }
 }
-DATABASES["default"]["ATOMIC_REQUESTS"] = True
+#DATABASES["default"]["ATOMIC_REQUESTS"] = True
+
+DATABASES['default'] = dj_database_url.parse('postgresql://trash_backend_render_user:85LPIjh4TwgKkwMrfzNCPC5JH9Q2ToOH@dpg-cpvc5hdumphs73cabsa0-a.oregon-postgres.render.com/trash_backend_render')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
