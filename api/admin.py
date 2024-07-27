@@ -10,7 +10,7 @@ class VendorAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'mobile_no']
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'photo', 'description', 'landmark', 'time_slot']
+    list_display = ['id', 'customer', 'photo', 'description', 'landmark', 'time_slot']
 
 class CustomerLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'latitude', 'longitude']
