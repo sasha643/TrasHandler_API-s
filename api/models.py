@@ -29,7 +29,7 @@ class PhotoUpload(models.Model):
         ('night', 'Night'),
     ]
 
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     photo = models.ImageField(upload_to='photos/')
     description = models.TextField()
     landmark = models.CharField(max_length=255)
