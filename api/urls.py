@@ -58,6 +58,8 @@ urlpatterns = [
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
     path('reject-and-reassign-pickup-request/', RejectAndReassignPickupRequestView.as_view(), name='reject-and-reassign-pickup-request'),
     path('customer/reject-pickup-request/', CustomerRejectPickupRequestView.as_view(), name='customer-reject-pickup-request'),
+    path('api/customer/<int:customer_id>/', CustomerAddressView.as_view(), name='customer-address-detail'),
+    path('api/customer/<int:customer_id>/address/<int:address_index>/', CustomerAddressView.as_view()),
     
 ]
 
