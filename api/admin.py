@@ -7,13 +7,13 @@ class CustomerAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'mobile_no']
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = ['id', 'name', 'email', 'mobile_no', 'address']
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'photo', 'description', 'landmark', 'time_slot']
 
 class CustomerLocationModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'latitude', 'longitude']
+    list_display = ['id', 'customer','address']
     search_fields = ['customer__name', 'customer__mobile_no']
 
 class VendorCompleteProfileModelAdmin(admin.ModelAdmin):
