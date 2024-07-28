@@ -33,13 +33,21 @@ class PhotoUploadSerializer(serializers.ModelSerializer):
 class CustomerSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
 
+class AddressSerializer(serializers.Serializer):
+    street = serializers.CharField(max_length=100)
+    city = serializers.CharField(max_length=50)
+    state = serializers.CharField(max_length=50)
+    zip_code = serializers.CharField(max_length=10)
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
 
 class CustomerLocationSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
+    address = AddressSerializer(many=True)
 
     class Meta:
         model = CustomerLocation
-        fields = ['customer_id', 'latitude', 'longitude']
+        fields = ['customer_id', 'address']
 
     def create(self, validated_data):
         customer_id = validated_data.pop('customer_id')
@@ -47,6 +55,11 @@ class CustomerLocationSerializer(serializers.ModelSerializer):
         location = CustomerLocation.objects.create(customer=customer, **validated_data)
         return location
 
+    def update(self, instance, validated_data):
+        instance.address = validated_data.get('address', instance.address)
+        instance.save()
+        return instance
+    
 class VendorCompleteProfileSerializer(serializers.ModelSerializer):
     vendor_id = serializers.IntegerField(write_only=True)
 
