@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, mixins, generics
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, views
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
@@ -10,6 +10,8 @@ from rest_framework.decorators import action
 from .models import *
 from .serializers import *
 from .functions import *
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
 
@@ -129,9 +131,11 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         try:
             customer_location = CustomerLocation.objects.get(customer=customer)
             # If an entry exists, update it
-            serializer = self.get_serializer(customer_location, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
+            existing_address = customer_location.address
+            new_address = request.data.get('address')
+            customer_location.address = existing_address + new_address
+            customer_location.save()
+            serializer = self.get_serializer(customer_location)
         except CustomerLocation.DoesNotExist:
             # If no entry exists, create a new one
             data = request.data.copy()
@@ -143,12 +147,95 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    def perform_update(self, serializer):
-        serializer.save()
-
     def perform_create(self, serializer):
         serializer.save()
 
+    def update_address(self, request, customer_id, *args, **kwargs):
+        customer = CustomerAuth.objects.get(id=customer_id)
+        location = CustomerLocation.objects.get(customer=customer)
+
+        address_id = kwargs.get('address_index')
+        if not address_id:
+            return Response({"error": "Address ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        address_data = request.data.get('address')
+        if not address_data:
+            return Response({"error": "Address data is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        address_index = int(address_id)
+        if address_index >= len(location.address):
+            return Response({"error": "Invalid address ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        address_serializer = AddressSerializer(location.address[address_index], data=address_data, partial=True)
+        if address_serializer.is_valid():
+            location.address[address_index].update(address_serializer.validated_data)
+            location.save()
+            return Response(location.address[address_index], status=status.HTTP_200_OK)
+        return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CustomerAddressView(APIView):
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return AddressSerializer
+        return CustomerLocationSerializer
+
+    def get_object(self, customer_id):
+        try:
+            return CustomerAuth.objects.get(id=customer_id)
+        except CustomerAuth.DoesNotExist:
+            return None
+
+    def get(self, request, customer_id, *args, **kwargs):
+        customer = self.get_object(customer_id)
+        if customer is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            location = CustomerLocation.objects.get(customer=customer)
+        except CustomerLocation.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CustomerLocationSerializer(location)
+        return Response(serializer.data)
+
+    def patch(self, request, customer_id, address_index, *args, **kwargs):
+        customer = self.get_object(customer_id)
+        if customer is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            location = CustomerLocation.objects.get(customer=customer)
+            if address_index >= len(location.address):
+                return Response({"error": "Invalid address index"}, status=status.HTTP_400_BAD_REQUEST)
+
+            address_data = request.data
+            address_serializer = self.get_serializer_class()(data=address_data, partial=True)
+            if address_serializer.is_valid():
+                location.address[address_index].update(address_serializer.validated_data)
+                location.save()
+                return Response(location.address[address_index], status=status.HTTP_200_OK)
+            return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except CustomerLocation.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, customer_id, address_index, *args, **kwargs):
+        customer = self.get_object(customer_id)
+        if customer is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            location = CustomerLocation.objects.get(customer=customer)
+            if address_index is None or address_index >= len(location.address):
+                return Response({"error": "Invalid address index"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            location.address.pop(address_index)
+            location.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except CustomerLocation.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorCompleteProfile.objects.all()
