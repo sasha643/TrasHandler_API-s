@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 import uuid
+from django.db.models import JSONField
 
 User = get_user_model()
 
@@ -17,6 +18,7 @@ class VendorAuth(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True, blank=True)
     mobile_no = models.CharField(max_length=15)
+    address=models.TextField(blank=True)
 
     def __str__(self):
         return f'{self.name}'
@@ -36,16 +38,13 @@ class PhotoUpload(models.Model):
     time_slot = models.CharField(max_length=10, choices=TIME_SLOTS)
 
     def __str__(self):
-        return f'{self.user.username} - {self.landmark}'
+        return f'{self.customer.name} - {self.landmark}'
 
 class CustomerLocation(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-    is_active = models.BooleanField(default=False)
-
+    address = JSONField(default=list)
     def __str__(self):
-        return f'{self.customer.name} - {self.latitude}, {self.longitude}'
+        return f'{self.customer.name} - {self.address}'
     
 class VendorCompleteProfile(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
@@ -62,7 +61,7 @@ class VendorLocation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     #timestamp = models.DateTimeField(auto_now_add=True)
-
+    is_active = models.BooleanField(default=False)
     def __str__(self):
         return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
 
