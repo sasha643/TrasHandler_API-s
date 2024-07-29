@@ -105,7 +105,7 @@ DATABASES = {
 }
 #DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
-DATABASES['default'] = dj_database_url.parse('postgresql://trashandler_user:hDG1OkJR3FKPZYwKhUVB3jVPdeRYTfwK@dpg-cqiipcij1k6c739fmjt0-a.oregon-postgres.render.com/trashandler')
+DATABASES['default'] = dj_database_url.parse('postgresql://trashandler_glhx_user:nxlpY3QSEqhIAxvwJbLK2YUy8b7W5FA8@dpg-cqjhbkmehbks73cbcbfg-a.oregon-postgres.render.com/trashandler_glhx')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
