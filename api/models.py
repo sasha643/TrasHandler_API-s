@@ -75,6 +75,17 @@ class PickupRequest(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
+    distance = models.IntegerField(blank=True, null=True)
+    landmark = models.CharField(max_length=255, default="ved")
+    TIME_SLOTS = [
+        ('morning', 'Morning'),
+        ('afternoon', 'Afternoon'),
+        ('evening', 'Evening'),
+        ('night', 'Night'),
+    ]
+    timeslots = models.CharField(max_length=10, choices=TIME_SLOTS)
+    photo = models.ImageField(upload_to='photos/')
+    description = models.TextField()
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
     rejected_vendors = models.ManyToManyField(VendorAuth, related_name='rejected_requests', blank=True)
