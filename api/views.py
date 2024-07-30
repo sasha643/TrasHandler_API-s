@@ -10,6 +10,8 @@ from rest_framework.decorators import action
 from .models import *
 from .serializers import *
 from .functions import *
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
 
@@ -360,13 +362,17 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
+        print("received")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         customer_id = serializer.validated_data['customer_id']
         latitude = serializer.validated_data['latitude']
         longitude = serializer.validated_data['longitude']
-
+        landmark = serializer.validated_data['landmark']
+        timeslots = serializer.validated_data['timeslots']
+        description = serializer.validated_data['description']
+        photo = serializer.validated_data['photo']
         try:
             customer = CustomerAuth.objects.get(id=customer_id)
         except CustomerAuth.DoesNotExist:
@@ -388,6 +394,11 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 customer=customer,
                 latitude=latitude,
                 longitude=longitude,
+                distance=min_distance,
+                landmark=landmark,
+                timeslots=timeslots,
+                description=description,
+                photo=photo,
                 vendor=nearest_vendor.vendor,
                 status='Request Sent'
             )
@@ -426,9 +437,14 @@ class VendorPickupRequestView(APIView):
                 "customer_mobile_no": request.customer.mobile_no,
                 "latitude": request.latitude,
                 "longitude": request.longitude,
+                "distance": request.distance,
+                "landmark": request.landmark,
+                "timeslot": request.timeslots,
+                "description": request.description,
                 "pickup_request_id": request.id,
                 "status": request.status,
-                "remarks": request.remarks,  # Include remarks field
+                "remarks": request.remarks,
+                "photo": request.photo # Include remarks field
             }
             pickup_requests_data.append(request_data)
 
