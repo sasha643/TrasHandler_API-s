@@ -104,7 +104,7 @@ class PickupRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PickupRequest
-        fields = ['customer_id', 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_mobile_no']
+        fields = ['customer_id', 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_mobile_no', 'landmark', 'timeslots', 'description','photo']
 
     def create(self, validated_data):
         customer_id = validated_data.pop('customer_id')
