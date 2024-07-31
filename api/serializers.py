@@ -112,6 +112,19 @@ class PickupRequestSerializer(serializers.ModelSerializer):
         request = PickupRequest.objects.create(customer=customer, **validated_data)
         return request
 
+class NewPickupRequestSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name')
+    photo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PickupRequest
+        fields = ['customer_name', 'description', 'timeslots', 'distance', 'landmark', 'photo']
+
+    def get_photo(self, obj):
+        request = self.context.get('request')
+        photo_url = obj.photo.url
+        return request.build_absolute_uri(photo_url)
+
 class VendorDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorAuth
