@@ -414,39 +414,47 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
             return Response({"error": "No active vendors found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+# class VendorPickupRequestView(APIView):
+#     permission_classes = [AllowAny]
+# 
+#     def get(self, request, vendor_id, *args, **kwargs):
+#         try:
+#             vendor = VendorAuth.objects.get(id=vendor_id)
+#         except VendorAuth.DoesNotExist:
+#             return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
+# 
+#         pickup_requests = PickupRequest.objects.filter(vendor=vendor)
+#         if not pickup_requests.exists():
+#             return Response({"error": "No pickup requests found for the provided vendor"}, status=status.HTTP_404_NOT_FOUND)
+# 
+#         pickup_requests_data = []
+#         for request in pickup_requests:
+#             request_data = {
+#                 "customer_id": request.customer.id,
+#                 "customer_name": request.customer.name,
+#                 "customer_mobile_no": request.customer.mobile_no,
+#                 "latitude": request.latitude,
+#                 "longitude": request.longitude,
+#                 "distance": request.distance,
+#                 "landmark": request.landmark,
+#                 "timeslot": request.timeslots,
+#                 "description": request.description,
+#                 "pickup_request_id": request.id,
+#                 "status": request.status,
+#                 "remarks": request.remarks,
+#                 "photo": request.photo # Include remarks field
+#             }
+#             pickup_requests_data.append(request_data)
+# 
+#         return Response(pickup_requests_data, status=status.HTTP_200_OK)
+
+'''This one is for PoC'''
+
 class VendorPickupRequestView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, vendor_id, *args, **kwargs):
-        try:
-            vendor = VendorAuth.objects.get(id=vendor_id)
-        except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
-
-        pickup_requests = PickupRequest.objects.filter(vendor=vendor)
-        if not pickup_requests.exists():
-            return Response({"error": "No pickup requests found for the provided vendor"}, status=status.HTTP_404_NOT_FOUND)
-
-        pickup_requests_data = []
-        for request in pickup_requests:
-            request_data = {
-                "customer_id": request.customer.id,
-                "customer_name": request.customer.name,
-                "customer_mobile_no": request.customer.mobile_no,
-                "latitude": request.latitude,
-                "longitude": request.longitude,
-                "distance": request.distance,
-                "landmark": request.landmark,
-                "timeslot": request.timeslots,
-                "description": request.description,
-                "pickup_request_id": request.id,
-                "status": request.status,
-                "remarks": request.remarks,
-                "photo": request.photo # Include remarks field
-            }
-            pickup_requests_data.append(request_data)
-
-        return Response(pickup_requests_data, status=status.HTTP_200_OK)
+    def get(self, request, vendor_id):
+        pickup_requests = PickupRequest.objects.filter(vendor_id=vendor_id)
+        serializer = NewPickupRequestSerializer(pickup_requests, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 class UpdatePickupRequestStatusView(generics.GenericAPIView):
