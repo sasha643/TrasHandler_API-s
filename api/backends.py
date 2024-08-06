@@ -6,12 +6,12 @@ from .models import CustomerAuth, VendorAuth, CustomUser
 User = CustomUser
 
 class MobileNoBackend(BaseBackend):
-    def authenticate(self, request, phone_number=None, **kwargs):
-        if phone_number is None:
+    def authenticate(self, request, mobile_no=None, **kwargs):
+        if mobile_no is None:
             return None
         try:
             
-            user = CustomUser.objects.get(phone_number=phone_number)
+            user = CustomUser.objects.get(mobile_no=mobile_no)
             print(f"Authenticated User: {user}")
             if hasattr(user, 'customerauth'):
                 return user.customerauth
@@ -28,10 +28,3 @@ class MobileNoBackend(BaseBackend):
         except User.DoesNotExist:
             return None
         
-from sms.backends.base import BaseSmsBackend        
-class YourSmsBackend(BaseSmsBackend):
-    def send_messages(self, messages):
-        for message in messages:
-            # Implement SMS sending logic here
-            print(f"Sending SMS to {message.to} with content {message.body}")
-        return len(messages)

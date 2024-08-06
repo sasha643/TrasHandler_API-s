@@ -6,6 +6,7 @@ from django.contrib import admin
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.schemas import get_schema_view
 
+
 from .views import *
 
 customer_auth_router = routers.SimpleRouter()
@@ -38,10 +39,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name="schema")),
+    path('ticket/', RegisterFilterAPIView.as_view(), name='ticket'),
     path('api/auth/customer/register/', CustomerAuthRegisterView.as_view(), name='customer-register'),
     path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
     path('customersignin/', CustomerSigninView.as_view(), name='customer-login'),
     path('vendorsignin/', VendorSigninView.as_view(), name='vendor-login'),
+    # path('auth_for_ws_connection/', AsgiValidateTokenView.as_view()),
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),
@@ -59,6 +62,8 @@ urlpatterns = [
     path('customer/reject-pickup-request/', CustomerRejectPickupRequestView.as_view(), name='customer-reject-pickup-request'),
     
 ]
+
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

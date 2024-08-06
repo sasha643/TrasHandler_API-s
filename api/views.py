@@ -1,26 +1,38 @@
+import uuid
+from email import message
+from django.shortcuts import render
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import viewsets, mixins, generics
 from rest_framework.response import Response
-
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
-
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
-
+# from trashapi.settings import TICKET_EXPIRE_TIME
 from .models import *
 from .serializers import *
 from django.conf import settings
 from .functions import *
 from .permissions import *
-
+from .consumers import *
+import json
 
 
 # Create your views here.
 
 User = get_user_model()
+
+TICKET_EXPIRE_TIME = 300
+
+def test(request):
+
+    return render(request, 'index.html')
 
 
 class CustomerAuthRegisterView(generics.CreateAPIView):
@@ -32,7 +44,26 @@ class VendorAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = VendorAuthRegisterSerializer
 
-    
+class RegisterFilterAPIView(APIView):
+    """
+        get:
+            API view for retrieving ticket uuid.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly,]
+
+    def get(self, request, *args, **kwargs):
+        ticket_uuid = str(uuid.uuid4())
+
+        if request.user.is_anonymous:
+            cache.set(ticket_uuid, False, TICKET_EXPIRE_TIME)
+        else:
+            # You can set any condition based on logged in user here
+            cache.set(ticket_uuid, TICKET_EXPIRE_TIME)
+
+        return Response({'ticket_uuid': ticket_uuid})
+
+
 class CustomerSigninView(APIView):
     permission_classes = [AllowAny]
     serializer_class = CustomerSigninSerializer
@@ -41,8 +72,8 @@ class CustomerSigninView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        phone_number = serializer.validated_data['phone_number']
-        user = authenticate(request, phone_number=phone_number)
+        mobile_no = serializer.validated_data['mobile_no']
+        user = authenticate(request, mobile_no=mobile_no)
 
         if user:
             try:
@@ -56,7 +87,7 @@ class CustomerSigninView(APIView):
                 }, status=status.HTTP_200_OK)
             except CustomerAuth.DoesNotExist:
                 return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Invalid mobile no"}, status=status.HTTP_400_BAD_REQUEST)
 
 class VendorSigninView(APIView):
     permission_classes = [AllowAny]
@@ -66,8 +97,8 @@ class VendorSigninView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        phone_number = serializer.validated_data['phone_number']
-        user = authenticate(request, phone_number=phone_number)
+        mobile_no = serializer.validated_data['mobile_no']
+        user = authenticate(request, mobile_no=mobile_no)
 
         if user:
             try:
@@ -81,7 +112,7 @@ class VendorSigninView(APIView):
                 }, status=status.HTTP_200_OK)
             except CustomerAuth.DoesNotExist:
                 return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"error": "Invalid mobile number"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Invalid mobile no"}, status=status.HTTP_400_BAD_REQUEST)
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()
     serializer_class = CustomerAuthSerializer
@@ -336,6 +367,7 @@ class VendorProfileDetailView(APIView):
             return Response({"error": "Vendor profile not found for the provided ID"}, status=status.HTTP_404_NOT_FOUND)
         
 
+
 class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = PickupRequest.objects.all()
     serializer_class = PickupRequestSerializer
@@ -353,7 +385,6 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         except CustomerAuth.DoesNotExist:
             return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Filter vendors where is_active is True
         active_vendors = VendorLocation.objects.filter(is_active=True)
         min_distance = float('inf')
         nearest_vendor = None
@@ -372,6 +403,16 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 vendor=nearest_vendor.vendor,
                 status='Request Sent'
             )
+
+            # Notify the nearest vendor
+            message = {
+            "message" : f"Pickup request sent by {pickup_request.customer.name}, his number is {pickup_request.customer.mobile_no}",
+            "latitude": pickup_request.latitude,
+            "longitude": pickup_request.longitude,
+
+            }
+            Notification.objects.create(user=nearest_vendor.vendor, message=message)
+
             return Response({
                 "message": "Pickup request created and assigned to the nearest active vendor",
                 "pickup_request": PickupRequestSerializer(pickup_request).data,
@@ -384,6 +425,7 @@ class PickupRequestViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
                 status='No Active Vendors Available'
             )
             return Response({"error": "No active vendors found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 class VendorPickupRequestView(APIView):
@@ -404,7 +446,7 @@ class VendorPickupRequestView(APIView):
             request_data = {
                 "customer_id": request.customer.id,
                 "customer_name": request.customer.name,
-                "customer_phone_number": request.customer.phone_number,
+                "customer_mobile_no": request.customer.mobile_no,
                 "latitude": request.latitude,
                 "longitude": request.longitude,
                 "pickup_request_id": request.id,
@@ -433,15 +475,22 @@ class UpdatePickupRequestStatusView(generics.GenericAPIView):
 
             try:
                 pickup_request = PickupRequest.objects.get(id=pickup_request_id, vendor=vendor)
+                customer = pickup_request.customer
             except PickupRequest.DoesNotExist:
                 return Response({"error": "Pickup request not found for the provided ID and vendor"}, status=status.HTTP_404_NOT_FOUND)
 
             pickup_request.status = new_status
             pickup_request.save()
 
+            # Notify the customer if the status is accepted
+            if new_status == 'Accepted':
+                message = f"Your pickup request has been accepted by {vendor.name}"
+                Notification.objects.create(user=customer, message=message)
+
             return Response({"message": "Status updated successfully", "pickup_request": PickupRequestSerializer(pickup_request).data}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         
 
 class CustomerPickupRequestView(APIView):
@@ -496,6 +545,11 @@ class RejectAndReassignPickupRequestView(APIView):
         pickup_request.rejected_vendors.add(vendor)
         pickup_request.save()
 
+        # Notify the rejected vendor
+        message = f"Pickup request has been reassigned to another vendor"
+        Notification.objects.create(user=vendor, message=message)
+
+
         # Find the next nearest active vendor who has not rejected the request
         customer_location = (pickup_request.latitude, pickup_request.longitude)
         active_vendors = VendorLocation.objects.exclude(vendor__in=pickup_request.rejected_vendors.all()).filter(is_active=True)
@@ -516,12 +570,18 @@ class RejectAndReassignPickupRequestView(APIView):
             pickup_request.status = 'Request Sent'
             pickup_request.save()
 
+            
+            #Notify the new nearest vendor
+            message = f"New pickup request from {pickup_request.customer.name}, Mobile No: {pickup_request.customer.mobile_no}"
+            Notification.objects.create(user=nearest_vendor, message=message)
+
             return Response({
                 "message": "Pickup request reassigned to the next nearest active vendor",
                 "pickup_request": PickupRequestSerializer(pickup_request).data,
             }, status=status.HTTP_200_OK)
         else:
             return Response({"error": "No other active vendors available"}, status=status.HTTP_404_NOT_FOUND)
+
         
 class CustomerRejectPickupRequestView(generics.GenericAPIView):
     serializer_class = RejectPickupRequestSerializer  

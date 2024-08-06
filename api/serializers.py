@@ -1,6 +1,5 @@
 import email
-from typing import Required
-from attr import fields
+
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth import get_user_model
@@ -18,7 +17,7 @@ class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerAuth
-        fields = ('name', 'email', 'phone_number')
+        fields = ('name', 'email', 'mobile_no')
         
 
     def create(self, validated_data):
@@ -26,14 +25,14 @@ class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
         return customer_auth
 
 class PhoneNumberSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
+    mobile_no = serializers.CharField(max_length=15)
 
 
 class VendorAuthRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorAuth
-        fields = ('name', 'email', 'phone_number')
+        fields = ('name', 'email', 'mobile_no')
 
     def create(self, validated_data):
         vendor_auth = VendorAuth.objects.create(**validated_data)
@@ -42,20 +41,20 @@ class VendorAuthRegisterSerializer(serializers.ModelSerializer):
 class CustomerAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAuth
-        fields = ('name', 'email', 'phone_number')
+        fields = ('name', 'email', 'mobile_no')
 
 
 class VendorAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = VendorAuth
-        fields = ('name', 'email', 'phone_number')
+        fields = ('name', 'email', 'mobile_no')
         
 
 class CustomerSigninSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
+    mobile_no = serializers.CharField(max_length=15)
 
 class VendorSigninSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
+    mobile_no = serializers.CharField(max_length=15)
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
@@ -118,13 +117,13 @@ class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
 class PickupRequestSerializer(serializers.ModelSerializer):
     customer_name = serializers.ReadOnlyField(source='customer.user.name')
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
-    customer_phone_number = serializers.ReadOnlyField(source='customer.user.phone_number')
+    customer_mobile_no = serializers.ReadOnlyField(source='customer.user.mobile_no')
     vendor_id = serializers.ReadOnlyField(source='vendor.id')
     vendor_name = serializers.ReadOnlyField(source='vendor.name')
 
     class Meta:
         model = PickupRequest
-        fields = [ 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_phone_number']
+        fields = [ 'latitude', 'longitude', 'vendor_id', 'vendor_name', 'status', 'customer_name', 'customer_email', 'customer_mobile_no']
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -139,7 +138,7 @@ class VendorDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorAuth
-        fields = ['id', 'name', 'email', 'phone_number']        
+        fields = ['id', 'name', 'email', 'mobile_no']        
 
 class UpdatePickupRequestStatusSerializer(serializers.Serializer):
     pickup_request_id = serializers.IntegerField()

@@ -3,12 +3,16 @@ from .models import *
 
 # Register your models here.
 
+class NotificationModelAdmin(admin.ModelAdmin):
+    list_display = ['user', 'message','created_at', 'sent', 'recipient_type']
+    # search_fields = ['recipient_type']
+
 class CustomerAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name','email', 'phone_number']
+    list_display = ['id', 'name','email', 'mobile_no']
 
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'phone_number']
+    list_display = ['id', 'name', 'email', 'mobile_no']
 
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
@@ -16,19 +20,19 @@ class PhotoUploadModelAdmin(admin.ModelAdmin):
 
 class CustomerLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'latitude', 'longitude']
-    search_fields = ['customer__name', 'customer__phone_number']
+    search_fields = ['customer__name', 'customer__mobile_no']
 
 class VendorCompleteProfileModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'vendor', 'gstin_number', 'business_name', 'pan_card', 'business_photos']
-    search_fields = ['vendor__name', 'vendor__phone_number']
+    search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class VendorLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'vendor', 'latitude', 'longitude', 'is_active']
-    search_fields = ['vendor__name', 'vendor__phone_number']
+    search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors', 'remarks']
-    search_fields = ['customer__name', 'customer__phone_number', 'vendor__name', 'vendor__phone_number', 'status']
+    search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
     def get_rejected_vendors(self, obj):
         return obj.get_rejected_vendors()
@@ -42,3 +46,4 @@ admin.site.register(VendorCompleteProfile, VendorCompleteProfileModelAdmin)
 admin.site.register(VendorLocation, VendorLocationModelAdmin)
 admin.site.register(PickupRequest, PickupRequestModelAdmin)
 admin.site.register(CustomUser)
+admin.site.register(Notification, NotificationModelAdmin)

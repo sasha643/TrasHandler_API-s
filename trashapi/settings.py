@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 import environ
 import os
+from datetime import timedelta
 
 
 
@@ -39,6 +40,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Application definition
 INSTALLED_APPS = [
+    'channels',
+    # 'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,13 +53,12 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'dj_rest_auth',
+    # 'dj_rest_auth',
     'rest_framework_swagger',
     'drf_spectacular',
+    # 'django_celery_results',
     'corsheaders',
-    # 'drfpasswordless',
-    'jwt_drf_passwordless',
-    'phonenumber_field',
+
     
 ]
 
@@ -70,6 +72,11 @@ INSTALLED_APPS = INSTALLED_APPS + EXTERNAL_APPS
 
 SITE_ID = 1
 
+# WSGI_APPLICATION = 'trashapi.wsgi.application'
+
+ASGI_APPLICATION = 'trashapi.asgi.application'
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -80,11 +87,11 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS":"drf_spectacular.openapi.AutoSchema",
 }
 
-from datetime import timedelta
+
 # from api.authentication import custom_user_auth_rule
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=55),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  
     'AUTH_HEADER_TYPES': ('Bearer',),
     'ALGORITHM': 'HS256',
@@ -111,7 +118,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    # 'api.middleware.AccessControlMiddleware',
+
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -132,11 +139,23 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'trashapi.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('DB_NAME', 'Trial'),
+#         'USER': os.getenv('DB_USER', 'postgres'),
+#         'PASSWORD': os.getenv('DB_PASSWORD', 'Benyo0310'),
+#         'HOST': os.getenv('DB_HOST', 'localhost'),
+#         'PORT': os.getenv('DB_PORT', '5432'),
+#     }
+# }
+
 
 DATABASES = {
     'default': {
@@ -144,7 +163,7 @@ DATABASES = {
         'NAME': 'Trial',
         'USER': 'postgres',
         'PASSWORD': 'Benyo0310',
-        'HOST': 'localhost',  
+        'HOST': '127.0.0.1',  
         'PORT': '5432',        
     }
 }
@@ -226,40 +245,44 @@ CORS_ALLOW_METHODS = [
     'OPTIONS'
 ]
 
-# SMS settings
-# SMS_BACKEND = 'sms.backends.console.SmsBackend',
 
-# PASSWORDLESS_AUTH = {
-#     'TOKEN_'
-#     # 'PASSWORDLESS_AUTH_TYPES': ['MOBILE',],
-#     # 'PASSWORDLESS_MOBILE_NOREPLY_NUMBER': +254704802453, 
-#     # 'PASSWORDLESS_USER_MOBILE_FIELD_NAME': 'mobile'
-# }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
 
-from decouple import config
 
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
-TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER')
 
-# PHONENUMBER_DEFAULT_REGION = 'IN'
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+CELERY_RESULT_BACKEND = 'rpc://'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
 
-MOBILE_FIELD_NAME= 'phone_number'
-SMS_BACKEND= 'sms.backends.console.SmsBackend'
-# SMS_SENDERS = {
-#     'passwordless_request': 'api.sms.CustomPasswordlessSMSSender'
-# }
-
-JWT_DRF_PASSWORDLESS = {
-    'ALLOWED_PASSWORDLESS_METHODS': ['MOBILE',],
-    
-    'PHONE_NUMBER_FIELD_MAX_LENGTH': 15,
-    'ALLOW_ADMIN_AUTHENTICATION': True,
-    'SMS_TOKEN_EXPIRATION': 10,
-    'JWT_AUTH': {
-        'JWT_PAYLOAD_HANDLER': 'jwt_auth.utils.jwt_payload_handler',
-        'JWT_ENCODE_HANDLER': 'jwt_auth.utils.jwt_encode_handler',
-        'JWT_DECODE_HANDLER': 'jwt_auth.utils.jwt_decode_handler',
-        'JWT_ALLOW_REFRESH': True,
-    }
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'trashapi': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
 }

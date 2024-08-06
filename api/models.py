@@ -1,22 +1,25 @@
+import json
 from django.db import models
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from phonenumber_field.modelfields import PhoneNumberField
+from asgiref.sync import async_to_sync, sync_to_async
+from channels.layers import get_channel_layer
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 
 
 
+
+
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email, phone_number, password=None, **extra_fields):
+    def create_user(self, email, mobile_no, password=None, **extra_fields):
         if not email:
             raise ValueError('An email is required.')
-        if not phone_number:
+        if not mobile_no:
             raise ValueError('The mobile number must be set')
         
         email = self.normalize_email(email)
-        user = self.model(email=email, phone_number=phone_number, **extra_fields)
+        user = self.model(email=email, mobile_no=mobile_no, **extra_fields)
         user.set_unusable_password()
         user.save(using=self._db)
         return user
@@ -41,7 +44,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         id = models.AutoField(primary_key=True)
         name = models.CharField(max_length=50)
         email = models.EmailField(max_length=100, unique=True, blank=True)
-        phone_number = models.CharField(max_length=15, unique=True)
+        mobile_no = models.CharField(max_length=15, unique=True)
         is_active = models.BooleanField(default=True)
         is_staff = models.BooleanField(default=False)
         is_superuser = models.BooleanField(default=False)
@@ -62,6 +65,24 @@ class VendorAuth(CustomUser):
 
     def __str__(self):
         return f'{self.name}'
+    
+class Notification(models.Model):
+
+    RECIPIENT_TYPE_CHOICES = [
+            ('vendor', 'Vendor'),
+            ('customer', 'Customer'),
+        ]
+
+    user = models.ForeignKey(CustomUser, related_name='notifications', on_delete=models.CASCADE)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent = models.BooleanField(default=False)
+    relevant = models.BooleanField(default=True)
+    recipient_type = models.CharField(max_length=10, choices=RECIPIENT_TYPE_CHOICES)
+
+    def __str__(self):
+        return f'Notification for {self.user}'
+    
 
 class PhotoUpload(models.Model):
     TIME_SLOTS = [
