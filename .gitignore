@@ -1,0 +1,8 @@
+/__pycache__/
+env/
+work/
+venv/
+.env/
+.gitattributes/
+memo/
+uvicorn trashapi.asgi:application --port 8000 --workers 4 --log-level debug --reload
