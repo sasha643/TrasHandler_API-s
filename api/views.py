@@ -7,14 +7,11 @@ from rest_framework.response import Response
 from django.core.cache import cache
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
-# from trashapi.settings import TICKET_EXPIRE_TIME
+
 from .models import *
 from .serializers import *
 from django.conf import settings
@@ -28,12 +25,6 @@ import json
 
 User = get_user_model()
 
-TICKET_EXPIRE_TIME = 300
-
-def test(request):
-
-    return render(request, 'index.html')
-
 
 class CustomerAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
@@ -44,24 +35,6 @@ class VendorAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = VendorAuthRegisterSerializer
 
-class RegisterFilterAPIView(APIView):
-    """
-        get:
-            API view for retrieving ticket uuid.
-    """
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly,]
-
-    def get(self, request, *args, **kwargs):
-        ticket_uuid = str(uuid.uuid4())
-
-        if request.user.is_anonymous:
-            cache.set(ticket_uuid, False, TICKET_EXPIRE_TIME)
-        else:
-            # You can set any condition based on logged in user here
-            cache.set(ticket_uuid, TICKET_EXPIRE_TIME)
-
-        return Response({'ticket_uuid': ticket_uuid})
 
 
 class CustomerSigninView(APIView):
