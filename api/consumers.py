@@ -268,7 +268,7 @@ class CustomerRejectPickupRequestConsumer(AsyncWebsocketConsumer):
         pickup_request.save()
 
         # Notify the vendor of reassigned pickup request
-        message = f"Pickup request has been reassigned to another vendor"
+        message = f"Pickup request has been cancelled by the  customer"
         Notification.objects.create(
             user=vendor, 
             message=message, 
@@ -302,15 +302,3 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
-
-
-# async def send_notification(user_id, message):
-#     channel_layer = get_channel_layer()
-#     group_name = f'Notifications_{user_id}'
-#     await channel_layer.group_send(
-#             group_name,
-#             {
-#                 'type': 'send_notification',
-#                 'message': message,
-#             }
-#         )
