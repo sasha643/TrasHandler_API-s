@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Endpoints &mdash; TRASHANDLER DOCUMENTATION 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Mobile Number Backend Authentication" href="authentication.html" />
+    <link rel="prev" title="api" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TRASHANDLER DOCUMENTATION
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">api</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">API Endpoints</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#admin-and-schema-documentation">Admin and Schema Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#authentication-and-registration">Authentication and Registration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#profile-and-location-management">Profile and Location Management</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="authentication.html">Mobile Number Backend Authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="middleware.html">JWT Authentication Middleware</a></li>
+<li class="toctree-l2"><a class="reference internal" href="websockets.html">WebSocket Consumers Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Handle Notification Signal</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TRASHANDLER DOCUMENTATION</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">api</a></li>
+      <li class="breadcrumb-item active">API Endpoints</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api_endpoints.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-endpoints">
+<span id="id1"></span><h1>API Endpoints<a class="headerlink" href="#api-endpoints" title="Link to this heading"></a></h1>
+<p>This section provides a detailed description of the URL patterns and the expected payloads for various API endpoints in the TrasHandler. The examples include payload structures for both requests and responses.</p>
+<section id="admin-and-schema-documentation">
+<h2>Admin and Schema Documentation<a class="headerlink" href="#admin-and-schema-documentation" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p><strong>Endpoint:</strong> <cite>/admin/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>Admin site</strong></p>
+<p><strong>Purpose:</strong> Access the Django admin interface.</p>
+<p><strong>Endpoint:</strong> <cite>/api/schema/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>API schema</strong></p>
+<p><strong>Purpose:</strong> Access the API schema documentation.</p>
+<p><strong>Endpoint:</strong> <cite>/api/docs/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>API documentation</strong></p>
+<p><strong>Purpose:</strong> Access the API documentation.</p>
+</div></blockquote>
+</section>
+<section id="authentication-and-registration">
+<h2>Authentication and Registration<a class="headerlink" href="#authentication-and-registration" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p><strong>Endpoint:</strong> <cite>/api/auth/customer/register/</cite></p>
+<p><strong>Method:</strong> <cite>POST</cite></p>
+<p><strong>Customer Registration</strong></p>
+<p><strong>Request Payload:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;John&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;john.doe@example.com&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;John&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;john.doe@example.com&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Endpoint:</strong> <cite>/api/auth/vendor/register/</cite></p>
+<p><strong>Method:</strong> <cite>POST</cite></p>
+<p><strong>Vendor Registration</strong></p>
+<p><strong>Request Payload:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Doe&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vendor@example.com&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Doe&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vendor@example.com&quot;</span><span class="p">,</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Endpoint:</strong> <cite>/customersignin/</cite></p>
+<p><strong>Method:</strong> <cite>POST</cite></p>
+<p><strong>Customer Login</strong></p>
+<p><strong>Request Payload:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;jwt_token_here&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Endpoint:</strong> <cite>/vendorsignin/</cite></p>
+<p><strong>Method:</strong> <cite>POST</cite></p>
+<p><strong>Vendor Login</strong></p>
+<p><strong>Request Payload:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mobile_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;jwt_token_here&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="profile-and-location-management">
+<h2>Profile and Location Management<a class="headerlink" href="#profile-and-location-management" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p><strong>Endpoint:</strong> <cite>/vendor/profile/&lt;int:vendor_id&gt;/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>Vendor Profile Details</strong></p>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+
+<span class="w">  </span><span class="nt">&quot;business_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Doe Enterprises&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Endpoint:</strong> <cite>/vendor/pickup-requests/&lt;int:vendor_id&gt;/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>Vendor Pickup Requests</strong></p>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pickup_requests&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;customer_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;pickup_request_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;customer_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;John Doe&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;customer_mobile_no&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">697967590</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">30.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">27.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pending&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;remarks&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Endpoint:</strong> <cite>/customer/&lt;int:customer_id&gt;/pickup-request/</cite></p>
+<p><strong>Method:</strong> <cite>GET</cite></p>
+<p><strong>Customer Pickup Request</strong></p>
+<p><strong>Response:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pickup_request_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;vendor_details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;vendor_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Doe Enterprises&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;vendor_mobile_no&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;123098876&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="api" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="authentication.html" class="btn btn-neutral float-right" title="Mobile Number Backend Authentication" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Abdulaziz Hussein.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

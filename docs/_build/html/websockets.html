@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebSocket Consumers And Celery &mdash; TRASHANDLER DOCUMENTATION 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Handle Notification Signal" href="signals.html" />
+    <link rel="prev" title="JWT Authentication Middleware" href="middleware.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TRASHANDLER DOCUMENTATION
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">api</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="api_endpoints.html">API Endpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="authentication.html">Mobile Number Backend Authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="middleware.html">JWT Authentication Middleware</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">WebSocket Consumers And Celery</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pickuprequestconsumer">PickupRequestConsumer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rejectandreassignpickuprequestconsumer">RejectAndReassignPickupRequestConsumer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#updatepickuprequeststatusconsumer">UpdatePickupRequestStatusConsumer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#customerrejectpickuprequestconsumer">CustomerRejectPickupRequestConsumer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#notificationconsumer">NotificationConsumer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#websocket-routing">WebSocket Routing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#celery-tasks">Celery Tasks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">WebSocket Consumers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#celery">Celery</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Handle Notification Signal</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="architectural%20design.html">Architectural design</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TRASHANDLER DOCUMENTATION</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">api</a></li>
+      <li class="breadcrumb-item active">WebSocket Consumers And Celery</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/websockets.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="websocket-consumers-and-celery">
+<span id="websocket-consumers"></span><h1>WebSocket Consumers And Celery<a class="headerlink" href="#websocket-consumers-and-celery" title="Link to this heading"></a></h1>
+<p>This section provides detailed documentation for the WebSocket consumers used in the Django project, describing their purpose, connection methods, actions, and parameters.</p>
+<section id="pickuprequestconsumer">
+<h2>PickupRequestConsumer<a class="headerlink" href="#pickuprequestconsumer" title="Link to this heading"></a></h2>
+<p>Handles the creation of pickup requests by customers and assigns them to the nearest available vendor.</p>
+<p><strong>connect()</strong></p>
+<p><strong>Description:</strong> Establishes a WebSocket connection for authenticated users.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Sets the user’s group name to <code class="docutils literal notranslate"><span class="pre">pickup_{user.id}</span></code>.</p></li>
+<li><p>Accepts the connection.</p></li>
+<li><p>Adds the user’s channel to the group.</p></li>
+</ul>
+<p><strong>disconnect(close_code)</strong></p>
+<p><strong>Description:</strong> Handles the disconnection of the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Removes the user’s channel from the group.</p></li>
+</ul>
+<p><strong>receive(text_data)</strong></p>
+<p><strong>Description:</strong> Receives and processes messages from the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Parses the incoming JSON data.</p></li>
+<li><p>Calls the <cite>create_pickup_request</cite> method with the parsed data.</p></li>
+<li><p>Sends the result back to the WebSocket.</p></li>
+</ul>
+<p><strong>create_pickup_request(data)</strong></p>
+<p><strong>Description:</strong> Creates a new pickup request and assigns it to the nearest active vendor.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>data</strong>: JSON data containing latitude and longitude.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Retrieves the customer profile based on the authenticated user.</p></li>
+<li><p>Calls the Celery task <cite>assign_vendor_task</cite> to find the nearest vendor.</p></li>
+<li><p>Creates a <cite>PickupRequest</cite> and sends a notification to the assigned vendor.</p></li>
+<li><p>Returns the result, including the pickup request details or an error message.</p></li>
+</ul>
+</section>
+<section id="rejectandreassignpickuprequestconsumer">
+<h2>RejectAndReassignPickupRequestConsumer<a class="headerlink" href="#rejectandreassignpickuprequestconsumer" title="Link to this heading"></a></h2>
+<p>Handles the rejection of pickup requests by vendors and reassigns them to the next nearest available vendor.</p>
+<p><strong>connect()</strong></p>
+<p><strong>Description:</strong> Establishes a WebSocket connection for authenticated users.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Sets the user’s group name to <code class="docutils literal notranslate"><span class="pre">rejectandreassign_{user.id}</span></code>.</p></li>
+<li><p>Accepts the connection.</p></li>
+<li><p>Adds the user’s channel to the group.</p></li>
+</ul>
+<p><strong>disconnect(close_code)</strong></p>
+<p><strong>Description:</strong> Handles the disconnection of the WebSocket.</p>
+<p><strong>Actions:</strong>
+- Removes the user’s channel from the group.</p>
+<p><strong>receive(text_data)</strong></p>
+<p><strong>Description:</strong> Receives and processes messages from the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Parses the incoming JSON data.</p></li>
+<li><p>Calls the <cite>reject_and_reassign_pickup_request</cite> method with the parsed data.</p></li>
+<li><p>Sends the result back to the WebSocket.</p></li>
+</ul>
+<p><strong>reject_and_reassign_pickup_request(data)</strong></p>
+<p><strong>Description:</strong> Rejects the current pickup request and assigns it to the next nearest available vendor.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>data</strong>: JSON data containing pickup request ID.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Retrieves the vendor profile based on the authenticated user.</p></li>
+<li><p>Marks the current pickup request as rejected and adds the vendor to the rejected vendors list.</p></li>
+<li><p>Calls the Celery task <cite>assign_vendor_task</cite> to find the next nearest vendor.</p></li>
+<li><p>Updates the pickup request with the new vendor and sends notifications.</p></li>
+<li><p>Returns the result, including the updated pickup request details or an error message.</p></li>
+</ul>
+</section>
+<section id="updatepickuprequeststatusconsumer">
+<h2>UpdatePickupRequestStatusConsumer<a class="headerlink" href="#updatepickuprequeststatusconsumer" title="Link to this heading"></a></h2>
+<p>Handles the updating of pickup request status by vendors.</p>
+<p><strong>connect()</strong></p>
+<p><strong>Description:</strong> Establishes a WebSocket connection for authenticated users.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Sets the user’s group name to <code class="docutils literal notranslate"><span class="pre">updatepickup_{user.id}</span></code>.</p></li>
+<li><p>Accepts the connection.</p></li>
+<li><p>Adds the user’s channel to the group.</p></li>
+</ul>
+<p><strong>disconnect(close_code)</strong></p>
+<p><strong>Description:</strong> Handles the disconnection of the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Removes the user’s channel from the group.</p></li>
+</ul>
+<p><strong>receive(text_data)</strong></p>
+<p><strong>Description:</strong> Receives and processes messages from the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Parses the incoming JSON data.</p></li>
+<li><p>Calls the <cite>update_pickup_request_status</cite> method with the parsed data.</p></li>
+<li><p>Sends the result back to the WebSocket.</p></li>
+</ul>
+<p><strong>update_pickup_request_status(data)</strong></p>
+<p><strong>Description:</strong> Updates the status of a pickup request.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>data</strong>: JSON data containing pickup request ID and new status.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Retrieves the vendor and pickup request based on the authenticated user and provided ID.</p></li>
+<li><p>Updates the status of the pickup request and sends a notification to the customer if accepted.</p></li>
+<li><p>Returns the result, including the updated pickup request status or an error message.</p></li>
+</ul>
+</section>
+<section id="customerrejectpickuprequestconsumer">
+<h2>CustomerRejectPickupRequestConsumer<a class="headerlink" href="#customerrejectpickuprequestconsumer" title="Link to this heading"></a></h2>
+<p>Handles the rejection of pickup requests by customers.</p>
+<p><strong>connect()</strong></p>
+<p><strong>Description:</strong> Establishes a WebSocket connection for authenticated users.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Sets the user’s group name to <code class="docutils literal notranslate"><span class="pre">customerReject_{user.id}</span></code>.</p></li>
+<li><p>Accepts the connection.</p></li>
+<li><p>Adds the user’s channel to the group.</p></li>
+</ul>
+<p><strong>disconnect(close_code)</strong></p>
+<p><strong>Description:</strong> Handles the disconnection of the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Removes the user’s channel from the group.</p></li>
+</ul>
+<p><strong>receive(text_data)</strong></p>
+<p><strong>Description:</strong> Receives and processes messages from the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Parses the incoming JSON data.</p></li>
+<li><p>Calls the <cite>customer_reject_pickup_request</cite> method with the parsed data.</p></li>
+<li><p>Sends the result back to the WebSocket.</p></li>
+</ul>
+<p><strong>customer_reject_pickup_request(data)</strong></p>
+<p><strong>Description:</strong> Rejects a pickup request by a customer.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>data</strong>: JSON data containing pickup request ID and remarks.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Retrieves the customer profile based on the authenticated user.</p></li>
+<li><p>Marks the pickup request as rejected and updates it with remarks.</p></li>
+<li><p>Sends a notification to the vendor about the rejection.</p></li>
+<li><p>Returns the result, including the rejection status or an error message.</p></li>
+</ul>
+</section>
+<section id="notificationconsumer">
+<h2>NotificationConsumer<a class="headerlink" href="#notificationconsumer" title="Link to this heading"></a></h2>
+<p>Handles the sending of notifications to users.</p>
+<p><strong>connect()</strong></p>
+<p><strong>Description:</strong> Establishes a WebSocket connection for authenticated users.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Sets the user’s group name to <code class="docutils literal notranslate"><span class="pre">Notifications_{user.id}</span></code>.</p></li>
+<li><p>Accepts the connection.</p></li>
+<li><p>Adds the user’s channel to the group.</p></li>
+<li><p>Logs the connection event.</p></li>
+</ul>
+<p><strong>disconnect(close_code)</strong></p>
+<p><strong>Description:</strong> Handles the disconnection of the WebSocket.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Removes the user’s channel from the group.</p></li>
+<li><p>Logs the disconnection event.</p></li>
+</ul>
+<p><strong>receive(text_data)</strong></p>
+<p><strong>Description:</strong> Receives messages from the WebSocket.</p>
+<p><strong>send_notification(event)</strong></p>
+<p><strong>Description:</strong> Sends notifications to the user.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>event</strong>: Dictionary containing the message to be sent.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Logs the sending event.</p></li>
+<li><p>Sends the message to the WebSocket.</p></li>
+</ul>
+</section>
+<section id="websocket-routing">
+<h2>WebSocket Routing<a class="headerlink" href="#websocket-routing" title="Link to this heading"></a></h2>
+<p>This section defines the WebSocket routes for the consumers.</p>
+<p><strong>websocket_urlpatterns</strong></p>
+<ul class="simple">
+<li><p><strong>Route for notifications</strong></p>
+<ul>
+<li><p><strong>Path</strong>: <code class="docutils literal notranslate"><span class="pre">ws/notifications/</span></code></p></li>
+<li><p><strong>Consumer</strong>: <cite>NotificationConsumer</cite></p></li>
+</ul>
+</li>
+<li><p><strong>Route for updating pickup request status</strong></p>
+<ul>
+<li><p><strong>Path</strong>: <code class="docutils literal notranslate"><span class="pre">ws/update_pickup_request_status/</span></code></p></li>
+<li><p><strong>Consumer</strong>: <cite>UpdatePickupRequestStatusConsumer</cite></p></li>
+</ul>
+</li>
+<li><p><strong>Route for rejecting and reassigning pickup requests</strong></p>
+<ul>
+<li><p><strong>Path</strong>: <code class="docutils literal notranslate"><span class="pre">ws/reject_and_reassign_pickup_request/</span></code></p></li>
+<li><p><strong>Consumer</strong>: <cite>RejectAndReassignPickupRequestConsumer</cite></p></li>
+</ul>
+</li>
+<li><p><strong>Route for rejecting pickup requests by customers</strong></p>
+<ul>
+<li><p><strong>Path</strong>: <code class="docutils literal notranslate"><span class="pre">ws/customer_reject_pickup_request/</span></code></p></li>
+<li><p><strong>Consumer</strong>: <cite>CustomerRejectPickupRequestConsumer</cite></p></li>
+</ul>
+</li>
+<li><p><strong>Route for creating pickup requests</strong></p>
+<ul>
+<li><p><strong>Path</strong>: <code class="docutils literal notranslate"><span class="pre">ws/pickup_request/</span></code></p></li>
+<li><p><strong>Consumer</strong>: <cite>PickupRequestConsumer</cite></p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="celery-tasks">
+<h2>Celery Tasks<a class="headerlink" href="#celery-tasks" title="Link to this heading"></a></h2>
+<p>This section defines the asynchronous tasks used for notifications and vendor assignment.</p>
+<p><strong>send_notification_task</strong></p>
+<p><strong>Description:</strong> Sends notifications to users.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>user_id</strong>: ID of the user to send the notification to.</p></li>
+<li><p><strong>message</strong>: The message content to be sent.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Logs the sending event.</p></li>
+<li><p>Uses the channel layer to send the notification to the user’s group.</p></li>
+<li><p>Logs success or error.</p></li>
+</ul>
+<p><strong>assign_vendor_task</strong></p>
+<p><strong>Description:</strong> Assigns the nearest available vendor to a pickup request.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><strong>customer_id</strong>: ID of the customer requesting the pickup.</p></li>
+<li><p><strong>latitude</strong>: Latitude of the pickup location.</p></li>
+<li><p><strong>longitude</strong>: Longitude of the pickup location.</p></li>
+<li><p><strong>excluded_vendor_ids</strong>: List of vendor IDs to exclude from assignment.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Retrieves the customer profile.</p></li>
+<li><p>Finds the nearest active vendor excluding the provided IDs.</p></li>
+<li><p>Returns the nearest vendor’s ID or <cite>None</cite> if no vendor is found.</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<blockquote>
+<div><p><strong>Demo Video</strong></p>
+<p>The following video demonstrates how to connect the WebSocket consumers and Celery in the project:</p>
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; height: auto;">
+<iframe src="https://www.loom.com/embed/06bf24cf527b407493fcd164db8e376b?sid=d0248dd2-63b0-4705-b095-cec42395195b"
+         frameborder="0"
+         webkitallowfullscreen
+         mozallowfullscreen
+         allowfullscreen
+         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+</iframe>
+</div></div></blockquote>
+</section>
+<section id="id1">
+<h2>WebSocket Consumers<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<p>The WebSocket consumers handle various real-time interactions, such as creating pickup requests, updating pickup statuses, rejecting requests, and sending notifications. To use the WebSocket consumers effectively, follow these steps:</p>
+<ol class="arabic">
+<li><p><strong>Set Up Redis and RabbitMQ</strong></p>
+<p>WebSocket consumers require a message broker for real-time communication. You can set up Redis and RabbitMQ using Docker.</p>
+<ul>
+<li><p><strong>Running Redis in Docker</strong>:</p>
+<p>Redis serves as the message broker that the Django Channels layer interacts with. Start a Redis container using the following command:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">6379</span>:6379<span class="w"> </span>redis
+</pre></div>
+</div>
+<p>This command pulls the Redis image (if not already available), runs it in detached mode, and maps the default Redis port 6379.</p>
+</li>
+<li><p><strong>Running RabbitMQ in Docker</strong>:</p>
+<p>RabbitMQ is another option for message brokering, especially when working with Celery. Start RabbitMQ with its management interface enabled using the following command:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>rabbitmq<span class="w"> </span>-p<span class="w"> </span><span class="m">5672</span>:5672<span class="w"> </span>-p<span class="w"> </span><span class="m">15672</span>:15672<span class="w"> </span>rabbitmq:3.13-management
+</pre></div>
+</div>
+<p>This command starts RabbitMQ and exposes the ports for messaging (5672) and the management dashboard (15672).</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Configure Django Channels</strong></p>
+<p>Ensure your Django application is configured to use Channels with Redis as the backend. Update your <cite>settings.py</cite> to include Channels configurations.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">CHANNEL_LAYERS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">{</span>
+<span class="s1">&#39;default&#39;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">   </span><span class="s1">&#39;BACKEND&#39;</span>:<span class="w"> </span><span class="s1">&#39;channels_redis.core.RedisChannelLayer&#39;</span>,
+<span class="w">   </span><span class="s1">&#39;CONFIG&#39;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">       </span><span class="s2">&quot;hosts&quot;</span>:<span class="w"> </span><span class="o">[(</span><span class="s1">&#39;127.0.0.1&#39;</span>,<span class="w"> </span><span class="m">6379</span><span class="o">)]</span>,
+<span class="w">   </span><span class="o">}</span>,
+<span class="w"> </span><span class="o">}</span>,
+<span class="w"> </span><span class="o">}</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Run the Django Development Server</strong></p>
+<p>Once Redis and RabbitMQ are running, start your Django development server to enable WebSocket connections:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uvicorn<span class="w"> </span>trashapi.asgi:application<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span><span class="w"> </span>--log-level<span class="w"> </span>debug<span class="w"> </span>--reload
+</pre></div>
+</div>
+</li>
+<li><p><strong>Testing WebSocket Endpoints</strong></p>
+<p>WebSocket endpoints can be tested using tools like Postman, Thunder Client, or directly in your application. Each WebSocket consumer handles specific events as defined in the documentation. Ensure that your WebSocket client connects to the appropriate endpoint and sends messages in the expected JSON format.</p>
+</li>
+</ol>
+</section>
+<section id="celery">
+<h2>Celery<a class="headerlink" href="#celery" title="Link to this heading"></a></h2>
+<p>Celery is used for handling background tasks such as assigning vendors to pickup requests and sending notifications asynchronously. Follow these steps to set up and use Celery:</p>
+<ol class="arabic">
+<li><p><strong>Install Required Dependencies</strong></p>
+<p>Ensure that Celery, Django_celery_results, Redis, and RabbitMQ are installed and properly configured in your Django project.</p>
+</li>
+<li><p><strong>Configure Django Celery results</strong></p>
+<p>Ensure your Django application is configured to use Django_celery_results as the backend. Update your <cite>settings.py</cite> to include Celery configurations.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">CELERY_BROKER_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;amqp://guest:guest@localhost:5672//&#39;</span>
+
+<span class="nv">CELERY_RESULT_BACKEND</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;django-cache&#39;</span>
+
+
+<span class="nv">CELERY_CACHE_BACKEND</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;default&#39;</span>
+
+<span class="nv">CACHES</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">{</span>
+<span class="w">  </span><span class="s1">&#39;default&#39;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">     </span><span class="s1">&#39;BACKEND&#39;</span>:<span class="w"> </span><span class="s1">&#39;django.core.cache.backends.db.DatabaseCache&#39;</span>,
+<span class="w">     </span><span class="s1">&#39;LOCATION&#39;</span>:<span class="w"> </span><span class="s1">&#39;my_cache_table&#39;</span>,
+<span class="w">  </span><span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>Run the following script to setup ‘my_cache_table’</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>manage.py<span class="w"> </span>createcachetable
+</pre></div>
+</div>
+</li>
+<li><p><strong>Running Celery Workers</strong></p>
+<p>Start Celery workers to handle background tasks. The commands vary based on the operating system:</p>
+<ul>
+<li><p><strong>For Windows</strong>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>celery<span class="w"> </span>-A<span class="w"> </span>trashapi<span class="w"> </span>worker<span class="w"> </span>--loglevel<span class="o">=</span>info<span class="w"> </span>-P<span class="w"> </span>solo
+</pre></div>
+</div>
+<p>This command starts a Celery worker in a Windows environment with the <cite>solo</cite> pool, necessary due to multiprocessing limitations on Windows.</p>
+</li>
+<li><p><strong>For Linux</strong>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>celery<span class="w"> </span>-A<span class="w"> </span>trashapi<span class="w"> </span>worker<span class="w"> </span>-l<span class="w"> </span>info
+</pre></div>
+</div>
+<p>On Linux, Celery workers can be started with the default multiprocessing pool, providing better performance and scalability.</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Monitoring Celery with Flower</strong></p>
+<p>Flower is a real-time web-based monitor for Celery. You can run it alongside your Celery workers to monitor task progress and health.</p>
+<ul>
+<li><p><strong>Starting Flower</strong>:</p>
+<blockquote>
+<div><div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>celery<span class="w"> </span>-A<span class="w"> </span>trashapi<span class="w"> </span>flower
+</pre></div>
+</div>
+</div></blockquote>
+<p>Access Flower’s dashboard at <cite>http://localhost:5555</cite> to monitor tasks, workers, and queues.</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Using Celery in Django</strong></p>
+<p>Once the workers are running, Celery tasks like <cite>send_notification_task</cite> and <cite>assign_vendor_task</cite> will be executed asynchronously based on the events triggered by the WebSocket consumers. This ensures that time-consuming tasks do not block the main application flow.</p>
+</li>
+<li><p><strong>Shutting Down Workers</strong></p>
+<p>When done with testing or running your application, stop the Celery workers and Flower monitor gracefully using <cite>CTRL + C</cite> in the terminal where they are running.</p>
+</li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="middleware.html" class="btn btn-neutral float-left" title="JWT Authentication Middleware" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="signals.html" class="btn btn-neutral float-right" title="Handle Notification Signal" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Abdulaziz Hussein.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JWT Authentication Middleware &mdash; TRASHANDLER DOCUMENTATION 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="WebSocket Consumers And Celery" href="websockets.html" />
+    <link rel="prev" title="Mobile Number Backend Authentication" href="authentication.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TRASHANDLER DOCUMENTATION
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">api</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="api_endpoints.html">API Endpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="authentication.html">Mobile Number Backend Authentication</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">JWT Authentication Middleware</a></li>
+<li class="toctree-l2"><a class="reference internal" href="websockets.html">WebSocket Consumers And Celery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="signals.html">Handle Notification Signal</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="architectural%20design.html">Architectural design</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TRASHANDLER DOCUMENTATION</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">api</a></li>
+      <li class="breadcrumb-item active">JWT Authentication Middleware</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/middleware.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="jwt-authentication-middleware">
+<h1>JWT Authentication Middleware<a class="headerlink" href="#jwt-authentication-middleware" title="Link to this heading"></a></h1>
+<p><strong>Description:</strong>
+Custom middleware that handles JWT authentication for WebSocket connections. It validates the token, decodes it, and attaches the authenticated user to the connection scope.</p>
+<p><strong>Methods:</strong></p>
+<ol class="arabic">
+<li><p><strong>get_user(validated_token):</strong></p>
+<p><strong>Description:</strong>
+- Retrieves a user based on the validated JWT token.</p>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><cite>validated_token</cite> (<cite>dict</cite>): The decoded JWT token containing the <cite>user_id</cite>.</p></li>
+</ul>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Attempts to retrieve the user from the database using the <cite>user_id</cite>.</p></li>
+<li><p>Returns the user if found, or <cite>AnonymousUser</cite> if the user does not exist.</p></li>
+</ul>
+<p><strong>Behavior:</strong></p>
+<ul class="simple">
+<li><p>The method uses the <cite>database_sync_to_async</cite> decorator to ensure it can run asynchronously within an async context.</p></li>
+</ul>
+</li>
+<li><p><strong>JwtAuthMiddleware(BaseMiddleware):</strong></p>
+<p><strong>Description:</strong>
+- Middleware class that processes WebSocket connections to authenticate users via JWT tokens.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Closes old database connections to prevent usage of timed-out connections.</p></li>
+<li><p>Extracts the JWT token from the WebSocket connection’s query string.</p></li>
+<li><p>Validates and decodes the token using <cite>UntypedToken</cite>.</p></li>
+<li><p>If the token is valid, it retrieves the user and attaches them to the connection scope.</p></li>
+</ul>
+<p><strong>Behavior:</strong></p>
+<ul class="simple">
+<li><p>If the token is invalid, the connection is not authenticated, and the method returns <cite>None</cite>.</p></li>
+<li><p>If the token is valid, the decoded data is used to retrieve the user, who is then attached to the WebSocket scope.</p></li>
+</ul>
+</li>
+<li><p><strong>JwtAuthMiddlewareStack(inner):</strong></p>
+<p><strong>Description:</strong>
+- A helper function that creates a middleware stack, integrating <cite>JwtAuthMiddleware</cite> with the Django <cite>AuthMiddlewareStack</cite>.</p>
+<p><strong>Actions:</strong></p>
+<ul class="simple">
+<li><p>Wraps the provided <cite>inner</cite> application with the <cite>JwtAuthMiddleware</cite> to handle JWT authentication.</p></li>
+</ul>
+</li>
+</ol>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="authentication.html" class="btn btn-neutral float-left" title="Mobile Number Backend Authentication" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="websockets.html" class="btn btn-neutral float-right" title="WebSocket Consumers And Celery" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Abdulaziz Hussein.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
