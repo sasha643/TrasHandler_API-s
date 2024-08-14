@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     # 'dj_rest_auth',
     'rest_framework_swagger',
     'drf_spectacular',
-    # 'django_celery_results',
+    'django_celery_results',
+    'django_celery_beat',
     'corsheaders',
 
     
@@ -258,7 +259,19 @@ CHANNEL_LAYERS = {
 
 
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
-CELERY_RESULT_BACKEND = 'rpc://'
+
+CELERY_RESULT_BACKEND = 'django-cache'
+
+# pick which cache from the CACHES setting.
+CELERY_CACHE_BACKEND = 'default'
+
+# django setting.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'my_cache_table',
+    }
+}
 # CELERY_ACCEPT_CONTENT = ['json']
 # CELERY_TASK_SERIALIZER = 'json'
 # CELERY_RESULT_SERIALIZER = 'json'

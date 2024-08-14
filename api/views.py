@@ -371,38 +371,6 @@ class VendorPickupRequestView(APIView):
         return Response(pickup_requests_data, status=status.HTTP_200_OK)
     
 
-class UpdatePickupRequestStatusView(generics.GenericAPIView):
-    serializer_class = UpdatePickupRequestStatusSerializer
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            pickup_request_id = serializer.validated_data['pickup_request_id']
-            new_status = serializer.validated_data['status']
-
-            try:
-                vendor = VendorAuth.objects.get(id=request.user.id)
-            except VendorAuth.DoesNotExist:
-                return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            try:
-                pickup_request = PickupRequest.objects.get(id=pickup_request_id, vendor=vendor)
-                customer = pickup_request.customer
-            except PickupRequest.DoesNotExist:
-                return Response({"error": "Pickup request not found for the provided ID and vendor"}, status=status.HTTP_404_NOT_FOUND)
-
-            pickup_request.status = new_status
-            pickup_request.save()
-
-            # Notify the customer if the status is accepted
-            if new_status == 'Accepted':
-                message = f"Your pickup request has been accepted by {vendor.name}"
-                Notification.objects.create(user=customer, message=message)
-
-            return Response({"message": "Status updated successfully", "pickup_request": PickupRequestSerializer(pickup_request).data}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         
 
