@@ -15,6 +15,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
 from django.conf import settings
+from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
+from .authentication import TokenAuthentication
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+import base64
+import os
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
+from .models import *
+from .serializers import *
+from.permissions import IsAuthenticatedOrVendor
 from .functions import *
 from .permissions import *
 from .consumers import *
@@ -23,7 +35,8 @@ import json
 
 # Create your views here.
 
-User = get_user_model()
+key = base64.b64decode('BdCCDDyv9PMQsjMVDmWNoQ==')
+iv = base64.b64decode('S1t4BPeDq9MPgUQA3ly5mw==')  
 
 
 class CustomerAuthRegisterView(generics.CreateAPIView):
@@ -144,6 +157,8 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     permission_classes = [IsAuthenticated]
     serializer_class = PhotoUploadSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrVendor]
     queryset = PhotoUpload.objects.all()
 
     def perform_create(self, serializer):

@@ -177,6 +177,7 @@ DATABASES["default"]["ATOMIC_REQUESTS"] = True
 #     }
 # }
 
+DATABASES['default'] = dj_database_url.parse('postgresql://trash_backend_render_user:85LPIjh4TwgKkwMrfzNCPC5JH9Q2ToOH@dpg-cpvc5hdumphs73cabsa0-a.oregon-postgres.render.com/trash_backend_render')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -235,7 +236,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-# ALLOWED_HOSTS = ['trashandler-api-s-11.onrender.com', 'trashandler-api-s-12.onrender.com']
+ALLOWED_HOSTS = ['trashandler-api-s-14.onrender.com', 'trashandler-api-s-15.onrender.com', 'trashandler-api-s-18.onrender.com']
 
 CORS_ALLOW_METHODS = [
     'GET',

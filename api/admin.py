@@ -12,11 +12,11 @@ class CustomerAuthModelAdmin(admin.ModelAdmin):
 
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no']
+    list_display = ['id', 'name', 'email', 'mobile_no', 'token']
 
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'photo', 'description', 'landmark', 'time_slot']
+    list_display = ['id','customer', 'photo', 'description', 'landmark', 'time_slot']
 
 class CustomerLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'latitude', 'longitude']
@@ -37,7 +37,7 @@ class PickupRequestModelAdmin(admin.ModelAdmin):
     def get_rejected_vendors(self, obj):
         return obj.get_rejected_vendors()
     get_rejected_vendors.short_description = 'Rejected Vendors'
-
+    
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
 admin.site.register(VendorAuth, VendorAuthModelAdmin)
 admin.site.register(PhotoUpload, PhotoUploadModelAdmin)

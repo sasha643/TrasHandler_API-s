@@ -92,7 +92,8 @@ class PhotoUpload(models.Model):
         ('night', 'Night'),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    #user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     photo = models.ImageField(upload_to='photos/')
     description = models.TextField()
     landmark = models.CharField(max_length=255)
@@ -105,7 +106,6 @@ class CustomerLocation(models.Model):
     customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
     latitude = models.FloatField()
     longitude = models.FloatField()
-    is_active = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.customer.name} - {self.latitude}, {self.longitude}'
@@ -129,7 +129,7 @@ class VendorLocation(models.Model):
 
     def __str__(self):
         return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
-
+    
 class PickupRequest(models.Model):
     STATUS_CHOICES = [
         ('Request Sent', 'Request Sent'),
@@ -151,4 +151,5 @@ class PickupRequest(models.Model):
 
 
     def get_rejected_vendors(self):
+
         return ", ".join([vendor.name for vendor in self.rejected_vendors.all()])

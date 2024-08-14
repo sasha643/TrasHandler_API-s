@@ -38,6 +38,9 @@ doc_path = os.path.join(os.path.dirname(__file__), 'docs/_build/html')
 
 
 
+#update_status_router = routers.SimpleRouter()
+#update_status_router.register(r'pickup-request-status', PickupRequestStatusUpdateViewSet, basename='pickup-request-status')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
@@ -56,6 +59,7 @@ urlpatterns = [
     path('', include(customer_location_router.urls)),
     path('', include(vendor_complete_profile_router.urls)),
     path('', include(vendor_status_router.urls)),
+    #path('', include(nearest_vendor_router.urls)),
     path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
