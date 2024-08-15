@@ -12,7 +12,7 @@ class CustomerAuthModelAdmin(admin.ModelAdmin):
 
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'email', 'mobile_no', 'token']
+    list_display = ['id', 'name', 'email', 'mobile_no']
 
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
@@ -31,7 +31,7 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'vendor', 'status', 'get_rejected_vendors', 'remarks']
+    list_display = ['id', 'customer', 'vendor', 'status', 'accepted_time', 'get_rejected_vendors', 'remarks']
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
     def get_rejected_vendors(self, obj):

@@ -1,3 +1,4 @@
+from django.utils import timezone
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -201,6 +202,8 @@ class UpdatePickupRequestStatusConsumer(AsyncWebsocketConsumer):
             customer = pickup_request.customer
 
             pickup_request.status = new_status
+            if new_status == 'Accepted':
+                pickup_request.accepted_time = timezone.now()  # Set the acceptance time
             pickup_request.save()
 
             if new_status == 'Accepted':

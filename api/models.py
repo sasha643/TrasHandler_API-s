@@ -93,7 +93,7 @@ class PhotoUpload(models.Model):
     ]
 
     #user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     photo = models.ImageField(upload_to='photos/')
     description = models.TextField()
     landmark = models.CharField(max_length=255)
@@ -142,6 +142,7 @@ class PickupRequest(models.Model):
     longitude = models.FloatField()
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
+    accepted_time = models.DateTimeField(null=True, blank=True)  # New field to track acceptance time
     rejected_vendors = models.ManyToManyField(VendorAuth, related_name='rejected_requests', blank=True)
     remarks = models.CharField(max_length=255, blank=True, null=True) 
 

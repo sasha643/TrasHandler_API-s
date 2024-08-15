@@ -177,7 +177,7 @@ DATABASES["default"]["ATOMIC_REQUESTS"] = True
 #     }
 # }
 
-DATABASES['default'] = dj_database_url.parse('postgresql://trash_backend_render_user:85LPIjh4TwgKkwMrfzNCPC5JH9Q2ToOH@dpg-cpvc5hdumphs73cabsa0-a.oregon-postgres.render.com/trash_backend_render')
+# DATABASES['default'] = dj_database_url.parse('postgresql://trash_backend_render_user:85LPIjh4TwgKkwMrfzNCPC5JH9Q2ToOH@dpg-cpvc5hdumphs73cabsa0-a.oregon-postgres.render.com/trash_backend_render')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -203,11 +203,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+
+TIME_ZONE = 'Asia/Kolkata'
+
+# Ensure Django uses timezone-aware datetimes
 
 USE_I18N = True
 
-USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)
@@ -236,7 +239,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['trashandler-api-s-14.onrender.com', 'trashandler-api-s-15.onrender.com', 'trashandler-api-s-18.onrender.com']
+ALLOWED_HOSTS = []
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -261,7 +264,7 @@ CHANNEL_LAYERS = {
 
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
-CELERY_RESULT_BACKEND = 'django-cache'
+CELERY_RESULT_BACKEND = 'django-db'
 
 # pick which cache from the CACHES setting.
 CELERY_CACHE_BACKEND = 'default'
@@ -273,6 +276,8 @@ CACHES = {
         'LOCATION': 'my_cache_table',
     }
 }
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # CELERY_ACCEPT_CONTENT = ['json']
 # CELERY_TASK_SERIALIZER = 'json'
 # CELERY_RESULT_SERIALIZER = 'json'
