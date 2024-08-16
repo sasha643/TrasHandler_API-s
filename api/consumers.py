@@ -301,10 +301,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 await self.send_notification({
                     'message': notification.message
                 })
-                # Mark as delivered after successful send (async call to save the object)
+                # Mark as delivered and sent after sending the notification
                 notification.delivered = True
                 notification.sent = True
                 await sync_to_async(notification.save)()
+                # Avoid sending duplicates by clearing the undelivered notifications list
+                undelivered_notifications.clear()
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:

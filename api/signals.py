@@ -11,7 +11,10 @@ import secrets
 
 @receiver(post_save, sender=Notification)
 def handle_notification_save(sender, instance, **kwargs):
-    send_notification_task.delay(instance.user.id, instance.message)
+    # Check if the notification has already been delivered
+    if not instance.delivered:
+        # If not delivered, send the notification
+        send_notification_task.delay(instance.user.id, instance.message)
 
     # # Mark the notification as read if it is relevant and not for reassignment
     # if instance.relevant:
