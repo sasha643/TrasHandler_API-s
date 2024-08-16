@@ -77,6 +77,7 @@ class Notification(models.Model):
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     sent = models.BooleanField(default=False)
+    delivered = models.BooleanField(default=False)  # New field to track delivery status
     relevant = models.BooleanField(default=True)
     recipient_type = models.CharField(max_length=10, choices=RECIPIENT_TYPE_CHOICES)
 

@@ -291,6 +291,21 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_add(self.group_name, self.channel_name)
             print(f"User {self.user.id} connected to group {self.group_name} on channel {self.channel_name}")
 
+             #Fetch undelivered notifications asynchronously
+            undelivered_notifications = await sync_to_async(list)(
+                Notification.objects.filter(user=self.user, delivered=False)
+            )
+
+            # Send undelivered notifications
+            for notification in undelivered_notifications:
+                await self.send_notification({
+                    'message': notification.message
+                })
+                # Mark as delivered after successful send (async call to save the object)
+                notification.delivered = True
+                notification.sent = True
+                await sync_to_async(notification.save)()
+
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
