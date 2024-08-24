@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.schemas import get_schema_view
+from rest_framework_simplejwt.views import TokenRefreshView
 from django.urls import path, re_path
 from django.views.static import serve
 
@@ -44,10 +45,10 @@ doc_path = os.path.join(os.path.dirname(__file__), 'docs/_build/html')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name="schema"),
-    re_path(r'^api/docs/$', serve, {'path': 'index.html', 'document_root': doc_path}),
-    
+    re_path(r'^api/docs/$', serve, {'path': 'index.html', 'document_root': doc_path}),    
     # Serve other Sphinx documentation files
     re_path(r'^api/docs/(?P<path>.*)$', serve, {'document_root': doc_path}),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/customer/register/', CustomerAuthRegisterView.as_view(), name='customer-register'),
     path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
     path('customersignin/', CustomerSigninView.as_view(), name='customer-login'),

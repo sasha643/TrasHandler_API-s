@@ -10,9 +10,18 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'trashapi.settings')
 
 app = Celery('trashapi')
 app.conf.beat_schedule = {
-    'schedule-pickup-requests': {
-        'task': 'api.tasks.schedule_pickup_requests',
-        'schedule': crontab(minute='*', hour='*'),  # Runs every hour
+
+    'refresh-tokens-every-10-minutes': {
+        'task': 'api.tasks.refresh_tokens',
+        'schedule': crontab(minute='*/10'),  # Run every minutes
+    },
+    'reassign-pickup-requests-every-minute': {
+        'task': 'api.tasks.reassign_pickup_requests',
+        'schedule': crontab(minute='*'),  # Runs every minute
+    },
+    'fetch_tokens_for_users': {
+        'task': 'api.tasks.fetch_tokens_for_users',
+        'schedule': crontab(minute='*'),  # Every minute for testing / change later
     },
 }
 app.config_from_object('django.conf:settings', namespace='CELERY')

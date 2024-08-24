@@ -15,9 +15,8 @@ def handle_notification_save(sender, instance, **kwargs):
     if not instance.delivered:
         # If not delivered, send the notification
         send_notification_task.delay(instance.user.id, instance.message)
-
-    # # Mark the notification as read if it is relevant and not for reassignment
-    # if instance.relevant:
+    #     # Mark the notification as read if it is relevant and not for reassignment
+    # elif instance.relevant:
     #     if instance.recipient_type == 'vendor' and 'reassign' not in instance.message.lower():
     #         Notification.objects.filter(id=instance.id).update(sent=True)
     #     elif instance.recipient_type == 'customer' and 'reassign' not in instance.message.lower():

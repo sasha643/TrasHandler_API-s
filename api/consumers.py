@@ -2,7 +2,7 @@ from django.utils import timezone
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, VendorLocation
+from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserToken
 from .functions import haversine
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
@@ -81,14 +81,20 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
                 longitude=longitude,
                 status='No Active Vendors Available'
             )
+            # Notify the customer that no other active vendors are available
+            Notification.objects.create(
+                user=customer, 
+                message="No active vendors are available to fulfill your pickup request at the moment.", 
+                relevant=True,
+                recipient_type='customer'
+            )
             return {"error": "No active vendors found"}
 
-
-class RejectAndReassignPickupRequestConsumer(AsyncWebsocketConsumer):
+class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope['user']
         if self.user.is_authenticated:
-            self.group_name = f'rejectandreassign_{self.user.id}'
+            self.group_name = f'updatepickup_{self.user.id}'
             await self.accept()
             await self.channel_layer.group_add(self.group_name, self.channel_name)
 
@@ -98,7 +104,13 @@ class RejectAndReassignPickupRequestConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        result = await self.reject_and_reassign_pickup_request(data)
+        status = data.get('status')
+
+        if status == 'Rejected':
+            result = await self.reject_and_reassign_pickup_request(data)
+        else:
+            result = await self.update_pickup_request_status(data)
+
         await self.send(text_data=json.dumps(result))
 
     @database_sync_to_async
@@ -168,25 +180,14 @@ class RejectAndReassignPickupRequestConsumer(AsyncWebsocketConsumer):
                 }
             }
         else:
+            # Notify the customer that no other active vendors are available
+            Notification.objects.create(
+                user=customer, 
+                message="No active vendors are available to fulfill your pickup request at the moment.", 
+                relevant=True,
+                recipient_type='customer'
+             )
             return {"error": "No other active vendors available"}
-
-
-class UpdatePickupRequestStatusConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.user = self.scope['user']
-        if self.user.is_authenticated:
-            self.group_name = f'updatepickup_{self.user.id}'
-            await self.accept()
-            await self.channel_layer.group_add(self.group_name, self.channel_name)
-
-    async def disconnect(self, close_code):
-        if self.user.is_authenticated:
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
-
-    async def receive(self, text_data):
-        data = json.loads(text_data)
-        result = await self.update_pickup_request_status(data)
-        await self.send(text_data=json.dumps(result))
 
     @database_sync_to_async
     def update_pickup_request_status(self, data):
@@ -207,14 +208,11 @@ class UpdatePickupRequestStatusConsumer(AsyncWebsocketConsumer):
             pickup_request.save()
 
             if new_status == 'Accepted':
-                message = {
-                    "message": f"Your pickup request has been accepted by {vendor.name}",
-                    "latitude": pickup_request.latitude,
-                    "longitude": pickup_request.longitude,
-                }
+                message = f"Your pickup request has been accepted by {vendor.name}"
+
                 Notification.objects.create(
                     user=customer, 
-                    message=json.dumps(message), 
+                    message=message, 
                     relevant=True,
                     recipient_type='customer'
                 )
@@ -228,6 +226,7 @@ class UpdatePickupRequestStatusConsumer(AsyncWebsocketConsumer):
             return {'error': 'Vendor profile not found'}
         except PickupRequest.DoesNotExist:
             return {'error': 'Pickup request not found for the provided ID and vendor'}
+
 
 
 class CustomerRejectPickupRequestConsumer(AsyncWebsocketConsumer):
@@ -280,6 +279,33 @@ class CustomerRejectPickupRequestConsumer(AsyncWebsocketConsumer):
         )
 
         return {"message": "Pickup request rejected successfully", "pickup_request_id": pickup_request_id}
+    
+class TokenConsumer(AsyncWebsocketConsumer):
+    
+    async def connect(self):
+        self.user = self.scope['user']
+        if self.user.is_authenticated:
+            self.group_name = f'token_{self.user.id}'
+            await self.accept()
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+
+    async def disconnect(self, close_code):
+        if self.user.is_authenticated:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive(self, text_data):
+        # retrieve tokens for the connected user
+        tokens = await self.get_user_token()
+        
+        # Send the tokens back to the client
+        await self.send(text_data=json.dumps({
+            'access_token': tokens.access_token,
+        }))
+
+    @sync_to_async
+    def get_user_token(self):
+        # Fetch the user's token from the database (modify as needed)
+        return UserToken.objects.get(user=self.scope['user'])
 
     
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -291,7 +317,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_add(self.group_name, self.channel_name)
             print(f"User {self.user.id} connected to group {self.group_name} on channel {self.channel_name}")
 
-             #Fetch undelivered notifications asynchronously
+            #Fetch undelivered notifications asynchronously
             undelivered_notifications = await sync_to_async(list)(
                 Notification.objects.filter(user=self.user, delivered=False)
             )
@@ -305,8 +331,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 notification.delivered = True
                 notification.sent = True
                 await sync_to_async(notification.save)()
-                # Avoid sending duplicates by clearing the undelivered notifications list
-                undelivered_notifications.clear()
+            
+
+
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
@@ -322,3 +349,5 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
+
+

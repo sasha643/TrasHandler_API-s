@@ -65,7 +65,18 @@ class VendorAuth(CustomUser):
 
     def __str__(self):
         return f'{self.name}'
+
+class UserToken(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='token')
+    access_token = models.TextField()
+    refresh_token = models.TextField()
+    token_created_at = models.DateTimeField(auto_now_add=True)
     
+    def __str__(self):
+        return f"Tokens for {self.user.email}"
+
+
+
 class Notification(models.Model):
 
     RECIPIENT_TYPE_CHOICES = [
@@ -143,6 +154,7 @@ class PickupRequest(models.Model):
     longitude = models.FloatField()
     vendor = models.ForeignKey(VendorAuth, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="Request Sent")
+    created_at = models.DateTimeField(auto_now_add=True)
     accepted_time = models.DateTimeField(null=True, blank=True)  # New field to track acceptance time
     rejected_vendors = models.ManyToManyField(VendorAuth, related_name='rejected_requests', blank=True)
     remarks = models.CharField(max_length=255, blank=True, null=True) 

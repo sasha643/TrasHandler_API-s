@@ -18,7 +18,7 @@ from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
 from .authentication import TokenAuthentication
-import base64
+from django.utils import timezone
 import os
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
@@ -61,11 +61,23 @@ class CustomerSigninView(APIView):
             try:
                 customer = CustomerAuth.objects.get(id=user.id)
                 refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+                # Save tokens to the database
+                UserToken.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'access_token': access_token,
+                        'refresh_token': refresh_token,
+                        'token_created_at': timezone.now()
+                    },
+                )
                 return Response({
                     'message': 'Login successful',
                     'name': user.name,
                     'id': user.id,
-                    'access': str(refresh.access_token),
+                    'access': access_token,
+                    'refresh': refresh_token
                 }, status=status.HTTP_200_OK)
             except CustomerAuth.DoesNotExist:
                 return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -86,14 +98,27 @@ class VendorSigninView(APIView):
             try:
                 vendor = VendorAuth.objects.get(id=user.id)
                 refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+
+                # Save tokens to the database
+                UserToken.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'access_token': access_token,
+                        'refresh_token': refresh_token,
+                        'token_created_at': timezone.now()
+                    }
+                )
                 return Response({
                     'message': 'Login successful',
                     'name': user.name,
                     'id': user.id,
-                    'access': str(refresh.access_token),
+                    'access': access_token,
+                    'refresh': refresh_token
                 }, status=status.HTTP_200_OK)
-            except CustomerAuth.DoesNotExist:
-                return Response({"error": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            except VendorAuth.DoesNotExist:
+                return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Invalid mobile no"}, status=status.HTTP_400_BAD_REQUEST)
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()

@@ -30,13 +30,17 @@ class VendorLocationModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'vendor', 'latitude', 'longitude', 'is_active']
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
+
 class PickupRequestModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'vendor', 'status', 'accepted_time', 'get_rejected_vendors', 'remarks']
+    list_display = ['id', 'customer', 'vendor', 'status', 'created_at','accepted_time', 'get_rejected_vendors', 'remarks']
     search_fields = ['customer__name', 'customer__mobile_no', 'vendor__name', 'vendor__mobile_no', 'status']
 
     def get_rejected_vendors(self, obj):
         return obj.get_rejected_vendors()
     get_rejected_vendors.short_description = 'Rejected Vendors'
+
+class UserTokenModelAdmin(admin.ModelAdmin):
+    list_display = ('user', 'access_token', 'refresh_token','token_created_at')
     
 admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
 admin.site.register(VendorAuth, VendorAuthModelAdmin)
@@ -47,3 +51,4 @@ admin.site.register(VendorLocation, VendorLocationModelAdmin)
 admin.site.register(PickupRequest, PickupRequestModelAdmin)
 admin.site.register(CustomUser)
 admin.site.register(Notification, NotificationModelAdmin)
+admin.site.register(UserToken, UserTokenModelAdmin)
