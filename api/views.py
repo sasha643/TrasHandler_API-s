@@ -10,8 +10,6 @@ from rest_framework.decorators import action
 from .models import *
 from .serializers import *
 from .functions import *
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 # Create your views here.
 
