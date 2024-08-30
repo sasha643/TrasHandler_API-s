@@ -134,6 +134,7 @@ class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
         # Mark the current vendor as having rejected the request
         pickup_request.status = 'Rejected'
         pickup_request.rejected_vendors.add(vendor)
+        pickup_request.created_at = timezone.now()
         pickup_request.save()
 
         # Notify the customer of reassigned pickup request
@@ -154,6 +155,7 @@ class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
             nearest_vendor = VendorAuth.objects.get(id=nearest_vendor_id)
             pickup_request.vendor = nearest_vendor
             pickup_request.status = 'Request Sent'
+            pickup_request.created_at = timezone.now()
             pickup_request.save()
 
             # Notify the new nearest vendor
@@ -281,31 +283,26 @@ class CustomerRejectPickupRequestConsumer(AsyncWebsocketConsumer):
         return {"message": "Pickup request rejected successfully", "pickup_request_id": pickup_request_id}
     
 class TokenConsumer(AsyncWebsocketConsumer):
-    
+
     async def connect(self):
         self.user = self.scope['user']
         if self.user.is_authenticated:
-            self.group_name = f'token_{self.user.id}'
+            self.group_name = f'Token_{self.user.id}'
             await self.accept()
             await self.channel_layer.group_add(self.group_name, self.channel_name)
+        else:
+            await self.close()
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-    async def receive(self, text_data):
-        # retrieve tokens for the connected user
-        tokens = await self.get_user_token()
-        
-        # Send the tokens back to the client
+    async def send_token(self, event):
+        access_token = event['access_token']
         await self.send(text_data=json.dumps({
-            'access_token': tokens.access_token,
+            'access_token': access_token,
         }))
 
-    @sync_to_async
-    def get_user_token(self):
-        # Fetch the user's token from the database (modify as needed)
-        return UserToken.objects.get(user=self.scope['user'])
 
     
 class NotificationConsumer(AsyncWebsocketConsumer):
