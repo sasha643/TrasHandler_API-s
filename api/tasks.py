@@ -125,8 +125,8 @@ def reassign_pickup_request(pickup_id):
         if pickup.status != 'Request Sent':
             return
 
-        # If the current vendor's 60-second window has passed or the request is rejected during the countdown
-        if timezone.now() >= pickup.created_at + timedelta(seconds=60) or pickup.vendor in pickup.rejected_vendors.all():
+        # If the current vendor's 60-second window has passed
+        if timezone.now() >= pickup.created_at + timedelta(seconds=60):
             current_vendor = pickup.vendor
 
             if current_vendor:
