@@ -163,7 +163,7 @@ def reassign_pickup_request(pickup_id):
                 )
 
                 # Restart the countdown with a 1-second delay
-                reassign_pickup_request.apply_async((pickup.id,), countdown=61)  # 60 seconds plus 1 second delay
+                reassign_pickup_request.apply_async((pickup.id,), countdown=60)  # 60 seconds plus 1 second delay
             else:
                 # Notify the customer that no other active vendors are available
                 Notification.objects.create(
@@ -202,7 +202,29 @@ def find_next_nearest_vendor(pickup, excluded_vendor_ids):
     return nearest_vendor
 
 
-# User = get_user_model()
+User = get_user_model()
+
+@shared_task
+def start_reconnect_task(user_id):
+    user = User.objects.get(id=user_id)
+    user_token = get_user_token(user)
+    if user_token:
+        # Logic to open a new WebSocket connection with the new token
+        ws_url = f"ws://localhost:8000/ws/get_access_token/?token={user_token.access_token}"
+        try:
+             # Establish a WebSocket connection
+             ws = websocket.create_connection(ws_url)
+
+        except Exception as e:
+            print(f"Failed to connect to websocket for user {user}: {str(e)}")
+            traceback.print_exc()
+
+
+def get_user_token(user):
+    try:
+        return UserToken.objects.get(user=user)
+    except UserToken.DoesNotExist:
+        return None
 
 # @shared_task()
 # def fetch_access_token_for_user(provided_token):

@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserToken
 from .functions import haversine
+from .signals import websocket_disconnected
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from api.tasks import assign_vendor_task
@@ -296,6 +297,8 @@ class TokenConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+            if not self.scope.get('logout', False):
+                websocket_disconnected.send(sender=self.__class__, user=self.user)
 
     async def send_token(self, event):
         access_token = event['access_token']

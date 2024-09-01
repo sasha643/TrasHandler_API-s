@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
+from django.contrib.auth import logout
 from .models import *
 from .serializers import *
 from django.conf import settings
@@ -120,6 +120,38 @@ class VendorSigninView(APIView):
             except VendorAuth.DoesNotExist:
                 return Response({"error": "Vendor profile not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"error": "Invalid mobile no"}, status=status.HTTP_400_BAD_REQUEST)
+
+class LogoutView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Invalidate the user's tokens
+        try:
+            user = request.user
+            token_obj = UserToken.objects.get(user=request.user)
+
+            # Blacklist the refresh token
+            refresh_token = token_obj.refresh_token
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception as e:
+                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Delete the tokens from the database
+            token_obj.delete()
+            
+            # Log the user
+            logout(request)
+
+            # Update the scope to indicate logout
+            # (This would be part of WebSocket logic)
+            if hasattr(request, 'scope'):
+                request.scope['logout'] = True
+
+            return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CustomerAuthViewSet(viewsets.GenericViewSet):
     queryset = CustomerAuth.objects.all()
     serializer_class = CustomerAuthSerializer
