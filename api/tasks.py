@@ -1,6 +1,7 @@
+import asyncio
 from datetime import timedelta
 import traceback
-import websocket
+import websockets
 from django.utils import timezone
 import logging
 from celery import shared_task
@@ -200,24 +201,6 @@ def find_next_nearest_vendor(pickup, excluded_vendor_ids):
             nearest_vendor = location.vendor
     
     return nearest_vendor
-
-
-User = get_user_model()
-
-@shared_task
-def start_reconnect_task(user_id):
-    user = User.objects.get(id=user_id)
-    user_token = get_user_token(user)
-    if user_token:
-        # Logic to open a new WebSocket connection with the new token
-        ws_url = f"ws://localhost:8000/ws/get_access_token/?token={user_token.access_token}"
-        try:
-             # Establish a WebSocket connection
-             ws = websocket.create_connection(ws_url)
-
-        except Exception as e:
-            print(f"Failed to connect to websocket for user {user}: {str(e)}")
-            traceback.print_exc()
 
 
 def get_user_token(user):

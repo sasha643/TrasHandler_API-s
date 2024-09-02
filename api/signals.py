@@ -2,7 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from asgiref.sync import async_to_sync
 from .models import Notification, PickupRequest, UserToken
-from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification, start_reconnect_task
+from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification
 
 
 import secrets
@@ -43,4 +43,5 @@ def trigger_token_refresh_notification(sender, instance, **kwargs):
 @receiver(websocket_disconnected)
 def handle_websocket_disconnected(sender, **kwargs):
     user = kwargs.get('user')
+    print(f"Signal triggered for user {user.id}")
     start_reconnect_task.delay(user.id)

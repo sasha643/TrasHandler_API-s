@@ -1,3 +1,5 @@
+
+import asyncio
 from django.utils import timezone
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -8,6 +10,7 @@ from .signals import websocket_disconnected
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from api.tasks import assign_vendor_task
+import websockets
 
 
 class PickupRequestConsumer(AsyncWebsocketConsumer):
@@ -297,14 +300,41 @@ class TokenConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        
             if not self.scope.get('logout', False):
-                websocket_disconnected.send(sender=self.__class__, user=self.user)
+                await self.reconnect()
+
+    async def reconnect(self):
+        # Get the user's token
+        user_token = await self.get_user_token(self.user)
+
+        if user_token:
+            ws_url = f"ws://localhost:8000/ws/get_access_token/?token={user_token.access_token}"
+            try:
+                # Establish a new WebSocket connection
+                async with websockets.connect(ws_url) as ws:
+                    while True:
+                        await asyncio.sleep(10)
+                        await ws.send("PONG")
+                    
+
+            except Exception as e:
+                print(f"Failed to reconnect WebSocket for user {self.user}: {str(e)}")
 
     async def send_token(self, event):
         access_token = event['access_token']
         await self.send(text_data=json.dumps({
             'access_token': access_token,
         }))
+
+    @staticmethod
+    async def get_user_token(user):
+        # Async method to get the user's token
+        try:   
+            token = await sync_to_async(UserToken.objects.get)(user=user)
+            return token
+        except UserToken.DoesNotExist:
+            return None
 
 
     
@@ -349,5 +379,4 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
-
 
