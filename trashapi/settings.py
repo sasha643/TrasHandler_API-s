@@ -164,11 +164,11 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Abdul',
-        'USER': 'postgres',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',  
-        'PORT': '5432',        
+        'NAME': 'TrasHandler',                      # Replace with your database name
+        'USER': 'postgres',                  # Replace with your database username
+        'PASSWORD': 'Dhruv@251103',         # Replace with your database password
+        'HOST': '49.14.135.230',             # Replace with your public IP address of local machine
+        'PORT': '5432',                      # Default PostgreSQL port
     }
 }
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -242,7 +242,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['13.232.64.63', 'localhost', '127.0.0.1']
 
 CORS_ALLOW_METHODS = [
     'GET',
