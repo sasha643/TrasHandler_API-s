@@ -2,11 +2,114 @@ from django.utils import timezone
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserToken
+from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserToken, VendorLocation
 from .functions import haversine
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from api.tasks import assign_vendor_task
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+import json
+from channels.generic.websocket import JsonWebsocketConsumer
+from .serializers import VendorLocationSerializer
+from .producers import send_location_update
+from django.db import close_old_connections
+import websockets
+import asyncio
+
+class VendorLocationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.user = self.scope['user']
+        if self.user.is_authenticated:
+            self.group_name = f'vendor_location_{self.user.id}'
+            await self.accept()
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+
+    async def disconnect(self, close_code):
+        if self.user.is_authenticated:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        action = data.get('action')
+
+        if action == 'create':
+            result = await self.create_location(data.get('data'))
+        elif action == 'update':
+            result = await self.update_location(data.get('data'))
+        else:
+            result = {"error": "Invalid action"}
+
+        await self.send(text_data=json.dumps(result))
+
+    @database_sync_to_async
+    def create_location(self, data):
+        try:
+            vendor = VendorAuth.objects.get(id=self.user.id)
+        except VendorAuth.DoesNotExist:
+            return {"error": "Vendor not found"}
+        
+        send_location_update('create', data, vendor.id)
+        return {"status": "Location creation initiated"}
+
+    @database_sync_to_async
+    def update_location(self, data):
+        try:
+            vendor = VendorAuth.objects.get(id=self.user.id)
+        except VendorAuth.DoesNotExist:
+            return {"error": "Vendor not found"}
+
+        try:
+            # Retrieve the current active location for the vendor
+            location = VendorLocation.objects.get(vendor=vendor, is_active=True)
+        except VendorLocation.DoesNotExist:
+            return {"error": f"Active location for vendor {self.user.id} not found"}
+        
+        send_location_update('update', data, vendor.id)
+        return {"status": "Location update initiated"}
+    
+class CustomerLocationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Ensure old database connections are closed
+        close_old_connections()
+        
+        self.user = self.scope['user']
+        if self.user.is_authenticated:
+            # Get the customer ID from the user model using sync_to_async
+            self.customer_id = await sync_to_async(self.get_customer_id)()
+            self.group_name = f'customer_location_{self.customer_id}'
+
+            # Join the group for this customer
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+            await self.accept()
+
+    async def disconnect(self, close_code):
+        # Leave the group
+        await self.channel_layer.group_discard(
+            self.group_name,
+            self.channel_name
+        )
+
+    async def location_update(self, event):
+        # Receive the location data from the group
+        location_data = event['location_data']
+
+        # Send the location data to the WebSocket
+        await self.send(text_data=json.dumps({
+            'action': 'location_update',
+            'location_data': location_data
+        }))
+
+    def get_customer_id(self):
+        # Get the customer ID from the user model
+        try:
+            customer = self.user.customerauth
+            return customer.id
+        except AttributeError:
+            return None
 
 
 class PickupRequestConsumer(AsyncWebsocketConsumer):
@@ -134,6 +237,7 @@ class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
         # Mark the current vendor as having rejected the request
         pickup_request.status = 'Rejected'
         pickup_request.rejected_vendors.add(vendor)
+        pickup_request.created_at = timezone.now()
         pickup_request.save()
 
         # Notify the customer of reassigned pickup request
@@ -154,6 +258,7 @@ class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
             nearest_vendor = VendorAuth.objects.get(id=nearest_vendor_id)
             pickup_request.vendor = nearest_vendor
             pickup_request.status = 'Request Sent'
+            pickup_request.created_at = timezone.now()
             pickup_request.save()
 
             # Notify the new nearest vendor
@@ -281,31 +386,55 @@ class CustomerRejectPickupRequestConsumer(AsyncWebsocketConsumer):
         return {"message": "Pickup request rejected successfully", "pickup_request_id": pickup_request_id}
     
 class TokenConsumer(AsyncWebsocketConsumer):
-    
+
     async def connect(self):
         self.user = self.scope['user']
         if self.user.is_authenticated:
-            self.group_name = f'token_{self.user.id}'
+            self.group_name = f'Token_{self.user.id}'
             await self.accept()
             await self.channel_layer.group_add(self.group_name, self.channel_name)
+        else:
+            await self.close()
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
-
-    async def receive(self, text_data):
-        # retrieve tokens for the connected user
-        tokens = await self.get_user_token()
         
-        # Send the tokens back to the client
+            if not self.scope.get('logout', False):
+                await self.reconnect()
+
+    async def reconnect(self):
+        # Get the user's token
+        user_token = await self.get_user_token(self.user)
+
+        if user_token:
+            ws_url = f"ws://localhost:8000/ws/get_access_token/?token={user_token.access_token}"
+            try:
+                # Establish a new WebSocket connection
+                async with websockets.connect(ws_url) as ws:
+                    while True:
+                        await asyncio.sleep(10)
+                        await ws.send("PONG")
+                    
+
+            except Exception as e:
+                print(f"Failed to reconnect WebSocket for user {self.user}: {str(e)}")
+
+    async def send_token(self, event):
+        access_token = event['access_token']
         await self.send(text_data=json.dumps({
-            'access_token': tokens.access_token,
+            'access_token': access_token,
         }))
 
-    @sync_to_async
-    def get_user_token(self):
-        # Fetch the user's token from the database (modify as needed)
-        return UserToken.objects.get(user=self.scope['user'])
+    @staticmethod
+    async def get_user_token(user):
+        # Async method to get the user's token
+        try:   
+            token = await sync_to_async(UserToken.objects.get)(user=user)
+            return token
+        except UserToken.DoesNotExist:
+            return None
+
 
     
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -349,5 +478,4 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
-
 

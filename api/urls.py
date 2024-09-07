@@ -53,6 +53,7 @@ urlpatterns = [
     path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
     path('customersignin/', CustomerSigninView.as_view(), name='customer-login'),
     path('vendorsignin/', VendorSigninView.as_view(), name='vendor-login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_results',
     'django_celery_beat',
+    'whitenoise.runserver_nostatic',
     'corsheaders',
 
     
@@ -163,9 +164,9 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Trial',
+        'NAME': 'Abdul',
         'USER': 'postgres',
-        'PASSWORD': 'Benyo0310',
+        'PASSWORD': 'Dhruv@251103',
         'HOST': '127.0.0.1',  
         'PORT': '5432',        
     }

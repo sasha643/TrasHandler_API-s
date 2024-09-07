@@ -1,5 +1,7 @@
+import asyncio
 from datetime import timedelta
-import websocket
+import traceback
+import websockets
 from django.utils import timezone
 import logging
 from celery import shared_task
@@ -10,6 +12,13 @@ from .models import CustomerAuth, VendorLocation, UserToken, PickupRequest, Noti
 from .functions import haversine
 import requests
 import json
+import time
+import jwt
+from jwt import InvalidTokenError, ExpiredSignatureError
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from api.models import UserToken
+
 
 
 
@@ -32,6 +41,22 @@ def send_notification_task(user_id, message):
     except Exception as e:
         logger.error(f"Error sending notification: {e}")
 
+@shared_task
+def send_refreshed_token_notification(user_id, access_token):
+    try:
+        logger.info(f"Sending refreshed token to user_id: {user_id}")
+        channel_layer = get_channel_layer()
+        group_name = f'Token_{user_id}'
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'send_token',
+                'access_token': access_token,
+            }
+        )
+        logger.info(f"Refreshed token sent successfully to {group_name}.")
+    except Exception as e:
+        logger.error(f"Error sending refreshed token: {e}")
 @shared_task
 def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[]):
     try:
@@ -87,90 +112,146 @@ def refresh_tokens():
 
                     logger.info(f"Refreshed tokens for {token_entry.user.name}")
                 else:
-                    logger.info(f"Failed to refresh token for {token_entry.user.name}: {response_data.get('detail')}")
+                    logger.error(f"Failed to refresh token for {token_entry.user.name}: {response_data.get('detail')}")
             except Exception as e:
-                logger.info(f"Error occurred while refreshing token for {token_entry.user.name}: {str(e)}")
-        logger.info(f"token age less than expiration threshhold")
-
-@shared_task()
-def reassign_pickup_requests():
-    one_minute_ago = timezone.now() - timedelta(minutes=1)
-    pending_pickups = PickupRequest.objects.filter(status='Request Sent', created_at__lte=one_minute_ago)
-    
-
-    for pickup in pending_pickups:
-        current_vendor = pickup.vendor
-        
-        # Automatically reject the request for the current vendor
-        if current_vendor:
-            pickup.rejected_vendors.add(current_vendor)
-            Notification.objects.create(
-                user=current_vendor, 
-                message="The pickup request has been automatically reassigned as no action was taken.", 
-                relevant=False,
-                recipient_type='vendor'
-            )
-
-        # Find the next nearest active vendor who has not rejected the request
-        excluded_vendor_ids = list(pickup.rejected_vendors.values_list('id', flat=True))
-        
-        # Calculate distances and find the nearest vendor
-        nearest_vendor = None
-        nearest_distance = None
-
-        for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
-            distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
-            if nearest_distance is None or distance < nearest_distance:
-                nearest_distance = distance
-                nearest_vendor = location.vendor
-
-        if nearest_vendor:
-            # Reassign to the next nearest vendor
-            pickup.vendor = nearest_vendor
-            pickup.status = 'Request Sent'
-            pickup.save()
-            
-
-            # Notify the new nearest vendor
-            Notification.objects.create(
-                user=nearest_vendor, 
-                message=json.dumps({
-                    "message": f"New pickup request from {pickup.customer.name}, Mobile No: {pickup.customer.mobile_no}",
-                    "latitude": pickup.latitude,
-                    "longitude": pickup.longitude
-                }), 
-                relevant=True,
-                recipient_type='vendor'
-            )
+                logger.error(f"Error occurred while refreshing token for {token_entry.user.name}: {str(e)}")
         else:
-            # Notify the customer that no other active vendors are available
-            Notification.objects.create(
-                user=pickup.customer, 
-                message="No active vendors are available to fulfill your pickup request at the moment.", 
-                relevant=True,
-                recipient_type='customer'
-            )
-            pickup.status = 'No Active Vendors Available'
-            pickup.save()
-            
-@shared_task
-def fetch_tokens_for_users():
-    users = UserToken.objects.all()
-    for user_token in users:
-        ws_url = f"ws://localhost:8000/ws/get_access_token/?token={user_token.access_token}"
-        try:
-            # Connect to the WebSocket
-            ws = websocket.create_connection(ws_url)
-            ws.send(json.dumps({}))
-            response = ws.recv()
-            ws.close()
+            logger.info(f"Token age for {token_entry.user.name} is less than expiration threshold, no refresh needed.")
 
-            # Parse the JSON response
-            tokens_data = json.loads(response)
-            print(f"Access Token for {user_token.user}: {tokens_data['access_token']}")
-           
-        except Exception as e:
-            print(f"Failed to fetch tokens for user {user_token.user}: {str(e)}")
+@shared_task
+def reassign_pickup_request(pickup_id):
+    try:
+        pickup = PickupRequest.objects.get(id=pickup_id)
+        
+        if pickup.status != 'Request Sent':
+            return
+
+        # If the current vendor's 60-second window has passed
+        if timezone.now() >= pickup.created_at + timedelta(seconds=60):
+            current_vendor = pickup.vendor
+
+            if current_vendor:
+                # Automatically reject the request for the current vendor
+                pickup.rejected_vendors.add(current_vendor)
+                Notification.objects.create(
+                    user=current_vendor, 
+                    message="The pickup request has been automatically reassigned as no action was taken.", 
+                    relevant=False,
+                    recipient_type='vendor'
+                )
+
+            # Find the next nearest vendor who has not rejected the request
+            excluded_vendor_ids = list(pickup.rejected_vendors.values_list('id', flat=True))
+            next_vendor = find_next_nearest_vendor(pickup, excluded_vendor_ids)
+
+            if next_vendor:
+                # Reassign to the next nearest vendor
+                pickup.vendor = next_vendor
+                pickup.status = 'Request Sent'
+                pickup.created_at = timezone.now()  # Reset the timer for the new vendor
+                pickup.save()
+
+                # Notify the new nearest vendor
+                Notification.objects.create(
+                    user=next_vendor, 
+                    message=json.dumps({
+                        "message": f"New pickup request from {pickup.customer.name}, Mobile No: {pickup.customer.mobile_no}",
+                        "latitude": pickup.latitude,
+                        "longitude": pickup.longitude
+                    }), 
+                    relevant=True,
+                    recipient_type='vendor'
+                )
+
+                # Restart the countdown with a 1-second delay
+                reassign_pickup_request.apply_async((pickup.id,), countdown=60)  # 60 seconds plus 1 second delay
+            else:
+                # Notify the customer that no other active vendors are available
+                Notification.objects.create(
+                    user=pickup.customer, 
+                    message="No active vendors are available to fulfill your pickup request at the moment.", 
+                    relevant=True,
+                    recipient_type='customer'
+                )
+                pickup.status = 'No Active Vendors Available'
+                pickup.save()
+
+        else:
+            # If the vendor has not rejected and 60 seconds have not passed, reschedule the check
+            time_elapsed = timezone.now() - pickup.created_at
+            remaining_time = 60 - time_elapsed.total_seconds()
+            reassign_pickup_request.apply_async((pickup.id,), countdown=max(int(remaining_time), 1))
+
+    except PickupRequest.DoesNotExist:
+        # Handle the case where the pickup request was deleted
+        pass
+
+
+def find_next_nearest_vendor(pickup, excluded_vendor_ids):
+    """
+    Helper function to find the next nearest vendor.
+    """
+    nearest_vendor = None
+    nearest_distance = None
+
+    for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
+        distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
+        if nearest_distance is None or distance < nearest_distance:
+            nearest_distance = distance
+            nearest_vendor = location.vendor
+    
+    return nearest_vendor
+
+
+def get_user_token(user):
+    try:
+        return UserToken.objects.get(user=user)
+    except UserToken.DoesNotExist:
+        return None
+
+# @shared_task()
+# def fetch_access_token_for_user(provided_token):
+#     user = get_user_from_token(provided_token)
+#     if not user:
+#         return {'error': 'Invalid or expired token provided.'}
+
+#     token_data = get_user_token(user)
+#     if token_data:
+#         ws_url = f"ws://localhost:8000/ws/get_access_token/?token={token_data.access_token}"
+    
+#         try:
+#             # Establish a WebSocket connection
+#             ws = websocket.create_connection(ws_url)
+            
+#             # Wait for the response (assuming your consumer sends the tokens immediately)
+#             ws.send(json.dumps({}))
+#             response = ws.recv()
+#             ws.close()
+
+#             # Parse the JSON response
+#             tokens_data = json.loads(response)
+#             print(f"Access Token: {tokens_data['access_token']}")
+#         except Exception as e:
+#             print(f"Failed to fetch tokens for user {user}: {str(e)}")
+#             traceback.print_exc()
+
+#     else:
+#         return {'error': 'No token data available for user.'}
+
+# def get_user_from_token(token):
+#     try:
+#         decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+#         user_id = decoded.get('user_id')
+#         return User.objects.get(id=user_id)
+#     except (InvalidTokenError, User.DoesNotExist):
+#         return None
+
+# def get_user_token(user):
+#     try:
+#         return UserToken.objects.get(user=user)
+#     except UserToken.DoesNotExist:
+#         return None
+
 # @shared_task
 # def schedule_pickup_requests():
 #     now = timezone.now()
