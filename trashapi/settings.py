@@ -265,7 +265,7 @@ CHANNEL_LAYERS = {
 
 
 
-CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+CELERY_BROKER_URL = 'amqp://guest:guest@13.232.64.63:5672//'
 
 CELERY_RESULT_BACKEND = 'django-db'
 
