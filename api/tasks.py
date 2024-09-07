@@ -89,8 +89,11 @@ def refresh_tokens():
     tokens = UserToken.objects.all()
     for token_entry in tokens:
         # Check if the token is near expiration
-        token_age = now - token_entry.token_created_at
-        if token_age >= expiration_threshold:
+        # Calculate the time when the access token will expire
+        access_token_expiry = token_entry.token_created_at + timedelta(minutes=15)  # Access token lifetime is 15 minutes
+
+        # Check if access token is close to expiring
+        if access_token_expiry - now <= expiration_threshold:
             # Refresh token using the refresh token endpoint
             refresh_url = 'http://127.0.0.1:8000/auth/token/refresh/'
             payload = {

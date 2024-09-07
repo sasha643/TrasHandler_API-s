@@ -6,7 +6,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserToken
 from .functions import haversine
-from .signals import websocket_disconnected
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from api.tasks import assign_vendor_task
