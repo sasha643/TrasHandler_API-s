@@ -166,8 +166,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'TrasHandler',                      # Replace with your database name
         'USER': 'postgres',                  # Replace with your database username
-        'PASSWORD': 'Dhruv@251103',         # Replace with your database password
-        'HOST': '49.14.135.230',             # Replace with your public IP address of local machine
+        'PASSWORD': 'postgres',         # Replace with your database password
+        'HOST': '13.232.64.63',             # Replace with your public IP address of local machine
         'PORT': '5432',                      # Default PostgreSQL port
     }
 }
