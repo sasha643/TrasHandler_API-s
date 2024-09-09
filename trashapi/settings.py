@@ -242,7 +242,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['13.232.64.63', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['3.108.52.92', 'localhost', '127.0.0.1']
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -258,7 +258,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('13.232.64.63', 6379)],
+            "hosts": [('3.108.52.92', 6379)],
         },
     },
 }
