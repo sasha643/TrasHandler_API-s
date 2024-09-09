@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         consumer = KafkaConsumer(
             'vendor-location-topic',
-            bootstrap_servers='localhost:9092',
+            bootstrap_servers='3.108.52.92:9092',
             value_deserializer=lambda m: json.loads(m.decode('utf-8'))
         )
 
