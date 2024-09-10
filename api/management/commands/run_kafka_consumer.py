@@ -1,20 +1,27 @@
 from django.core.management.base import BaseCommand
-from kafka import KafkaConsumer
+from confluent_kafka import Consumer
 import json
 from api.models import VendorLocation, VendorAuth, PickupRequest
 from api.serializers import VendorLocationSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+
 class Command(BaseCommand):
     help = 'Run Kafka consumer for processing messages'
 
     def handle(self, *args, **kwargs):
-        consumer = KafkaConsumer(
-            'vendor-location-topic',
-            bootstrap_servers='3.108.52.92:9092',
-            value_deserializer=lambda m: json.loads(m.decode('utf-8'))
-        )
+        # Configuration for Confluent Kafka Consumer
+        conf = {
+            'bootstrap.servers': 'localhost:9092',  # Kafka broker address
+            'group.id': 'vendor-location-group',  # Required group ID for the consumer
+            'client.id': 'vendor-location-consumer',  # Client identifier for the consumer
+            'auto.offset.reset': 'earliest',  # Start reading at the earliest available message
+        }
+
+        # Create a Kafka consumer instance
+        consumer = Consumer(conf)
+        consumer.subscribe(['vendor-location-topic'])
 
         def handle_message(message):
             action = message.get('action')
@@ -85,8 +92,27 @@ class Command(BaseCommand):
             self.stdout.write(f"Sent location data to customer {customer_id}")
 
         self.stdout.write('Starting Kafka consumer...')
-        for message in consumer:
-            handle_message(message.value)
+        try:
+            while True:
+                msg = consumer.poll(1.0)  # Poll messages from Kafka with a 1-second timeout
+                if msg is None:
+                    continue
+                if msg.error():
+                    self.stdout.write(f"Consumer error: {msg.error()}")
+                    continue
+                
+                # Log the raw message value
+                raw_msg = msg.value().decode('utf-8')
+                self.stdout.write(f"Raw Kafka message: {raw_msg}")
 
-
-
+                # Try to parse the message as JSON
+                try:
+                    json_msg = json.loads(raw_msg)
+                    handle_message(json_msg)
+                except json.JSONDecodeError as e:
+                    self.stdout.write(f"Failed to decode message as JSON: {e}")
+                    continue
+        except KeyboardInterrupt:
+            self.stdout.write('Kafka consumer stopped.')
+        finally:
+            consumer.close()  # Close the consumer on exit
