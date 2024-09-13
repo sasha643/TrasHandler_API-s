@@ -40,11 +40,11 @@ class PickupRequestConsumer(AsyncWebsocketConsumer):
             return {"error": "Customer profile not found"}
 
         task_result = assign_vendor_task.delay(self.user.id, latitude, longitude)
-        nearest_vendor_id = task_result.get()
+        nearest_vendor_ids = task_result.get()
 
 
-        if nearest_vendor_id:
-            nearest_vendor = VendorAuth.objects.get(id=nearest_vendor_id)
+        if nearest_vendor_ids:
+            nearest_vendor = VendorAuth.objects.get(id=nearest_vendor_ids[0])
             pickup_request = PickupRequest.objects.create(
                 customer=customer,
                 latitude=latitude,

@@ -65,6 +65,7 @@ urlpatterns = [
     path('vendor/profile/<int:vendor_id>/', VendorProfileDetailView.as_view(), name='vendor-profile-detail'),
     path('vendor/pickup-requests/<int:vendor_id>/', VendorPickupRequestView.as_view(), name='vendor-pickup-requests'),
     path('customer/<int:customer_id>/pickup-request/', CustomerPickupRequestView.as_view(), name='customer-pickup-request'),
+    path('__debug__/', include('debug_toolbar.urls')),
     
 ]
 

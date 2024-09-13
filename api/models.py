@@ -5,7 +5,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-
+from django.contrib.gis.db import models as gis_models
 
 
 
@@ -114,13 +114,6 @@ class PhotoUpload(models.Model):
     def __str__(self):
         return f'{self.user.name} - {self.landmark}'
 
-class CustomerLocation(models.Model):
-    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-
-    def __str__(self):
-        return f'{self.customer.name} - {self.latitude}, {self.longitude}'
     
 class VendorCompleteProfile(models.Model):
     vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
@@ -132,15 +125,24 @@ class VendorCompleteProfile(models.Model):
     def __str__(self):
         return f'{self.vendor.name} - {self.business_name}'
     
-class VendorLocation(models.Model):
-    vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+
+class CustomerLocation(models.Model):
+    customer = models.ForeignKey(CustomerAuth, on_delete=models.CASCADE)
+    location = gis_models.PointField(geography=True, srid=4326, null=True)
     is_active = models.BooleanField(default=False)
-    #timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
+        return f'{self.customer.name} - {self.location}'
+
+ 
+
+class VendorLocation(models.Model):
+    vendor = models.ForeignKey(VendorAuth, on_delete=models.CASCADE)
+    location = gis_models.PointField(geography=True, srid=4326, null=True)
+    is_active = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.vendor.name} - {self.location}'
     
 class PickupRequest(models.Model):
     STATUS_CHOICES = [

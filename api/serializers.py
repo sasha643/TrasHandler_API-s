@@ -64,27 +64,6 @@ class PhotoUploadSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CustomerLocationSerializer(serializers.ModelSerializer):
-    latitude = serializers.FloatField()
-    longitude = serializers.FloatField()
-
-    class Meta:
-        model = CustomerLocation
-        fields = ['latitude', 'longitude']
-
-    def create(self, validated_data):
-        # Customer will be assigned in the viewset's perform_create method
-        location = CustomerLocation.objects.create(**validated_data)
-        return location
-
-    def update(self, instance, validated_data):
-        # Customer will be handled in the viewset's perform_update method
-        instance.latitude = validated_data.get('latitude', instance.latitude)
-        instance.longitude = validated_data.get('longitude', instance.longitude)
-        instance.save()
-        return instance
-
-
 
 class VendorCompleteProfileSerializer(serializers.ModelSerializer):
 
@@ -98,15 +77,65 @@ class VendorCompleteProfileSerializer(serializers.ModelSerializer):
         return profile
 
     
-class VendorLocationSerializer(serializers.ModelSerializer):
+from django.contrib.gis.geos import Point
 
+class CustomerLocationSerializer(serializers.ModelSerializer):
+    latitude = serializers.FloatField(write_only=True)
+    longitude = serializers.FloatField(write_only=True)
+    location = serializers.SerializerMethodField(read_only=True)  # To return the location as latitude/longitude
+    
     class Meta:
-        model = VendorLocation
-        fields = ['latitude', 'longitude']
+        model = CustomerLocation
+        fields = ['latitude', 'longitude', 'location']
+
+    def get_location(self, obj):
+        # This returns location as {'latitude': ..., 'longitude': ...}
+        if obj.location:
+            return {'latitude': obj.location.y, 'longitude': obj.location.x}
+        return None
 
     def create(self, validated_data):
-        location = VendorLocation.objects.create(**validated_data)
-        return location
+        latitude = validated_data.pop('latitude')
+        longitude = validated_data.pop('longitude')
+        point = Point(longitude, latitude)
+        validated_data['location'] = point
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        latitude = validated_data.pop('latitude', None)
+        longitude = validated_data.pop('longitude', None)
+        if latitude is not None and longitude is not None:
+            instance.location = Point(longitude, latitude)
+        return super().update(instance, validated_data)
+    
+class VendorLocationSerializer(serializers.ModelSerializer):
+    latitude = serializers.FloatField(write_only=True)
+    longitude = serializers.FloatField(write_only=True)
+    location = serializers.SerializerMethodField(read_only=True)  # To return the location as latitude/longitude
+    
+    class Meta:
+        model = VendorLocation
+        fields = ['latitude', 'longitude', 'location']
+
+    def get_location(self, obj):
+        # This returns location as {'latitude': ..., 'longitude': ...}
+        if obj.location:
+            return {'latitude': obj.location.y, 'longitude': obj.location.x}
+        return None
+
+    def create(self, validated_data):
+        latitude = validated_data.pop('latitude')
+        longitude = validated_data.pop('longitude')
+        point = Point(longitude, latitude)
+        validated_data['location'] = point
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        latitude = validated_data.pop('latitude', None)
+        longitude = validated_data.pop('longitude', None)
+        if latitude is not None and longitude is not None:
+            instance.location = Point(longitude, latitude)
+        return super().update(instance, validated_data)
 
 class VendorLocationStatusUpdateSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField()

@@ -8,7 +8,7 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db import transaction, connection
-from .models import CustomerAuth, VendorLocation, UserToken, PickupRequest, Notification
+from .models import CustomerAuth, VendorAuth, VendorLocation, UserToken, PickupRequest, Notification
 from .functions import haversine
 import requests
 import json
@@ -18,11 +18,14 @@ from jwt import InvalidTokenError, ExpiredSignatureError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from api.models import UserToken
-
-
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+from django.core.cache import cache
 
 
 logger = logging.getLogger(__name__)
+CACHE_TIMEOUT = 300  # 5 minutes
 
 @shared_task
 def send_notification_task(user_id, message):
@@ -57,6 +60,7 @@ def send_refreshed_token_notification(user_id, access_token):
         logger.info(f"Refreshed token sent successfully to {group_name}.")
     except Exception as e:
         logger.error(f"Error sending refreshed token: {e}")
+
 @shared_task
 def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[]):
     try:
@@ -64,23 +68,73 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
     except CustomerAuth.DoesNotExist:
         return {"error": "Customer profile not found"}
 
-    active_vendors = VendorLocation.objects.exclude(vendor_id__in=excluded_vendor_ids).filter(is_active=True)
-    min_distance = float('inf')
-    nearest_vendor = None
+    customer_location = Point(float(longitude), float(latitude), srid=4326)
 
-    for vendor in active_vendors:
-        distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
-        if distance < min_distance:
-            min_distance = distance
-            nearest_vendor = vendor
+    # Generate a cache key based on location and excluded vendors
+    cache_key = f"nearest_vendors_{latitude}_{longitude}_{'_'.join(map(str, excluded_vendor_ids))}"
+    start_cached = time.time()
+    cached_vendors = cache.get(cache_key)
+    end_cached = time.time()
+    cached_time = end_cached - start_cached
+    
+    if cached_vendors:
+        print(f"Cached value found: {cached_vendors}")
+        print(f"Execution time for cached query: {cached_time} seconds")
+        return cached_vendors
 
-    if nearest_vendor:
-        return nearest_vendor.vendor.id
+    # Get active vendors within 5km sorted by distance, excluding those already rejected
+    start_normal = time.time()
+    active_vendors = VendorLocation.objects.exclude(vendor_id__in=excluded_vendor_ids) \
+        .filter(is_active=True, location__distance_lte=(customer_location, D(km=5))) \
+        .annotate(distance=Distance('location', customer_location)) \
+        .order_by('distance')[:3]
+    end_normal = time.time()
+    normal_time = end_normal - start_normal
+    
+    print(f"Execution time for normal query: {normal_time} seconds")
+
+    if active_vendors.exists():
+        nearest_vendors = [vendor.vendor.id for vendor in active_vendors]
+        # Cache the result
+        cache.set(cache_key, nearest_vendors, CACHE_TIMEOUT)
+        logger.info(f'Caching vendors for key: {cache_key}, value: {nearest_vendors}')
+        print(f"Cached value set: {nearest_vendors}")
+
+        return nearest_vendors
+    else:
+        return None
+
+def find_next_nearest_vendor(pickup, excluded_vendor_ids):
+    """
+    Helper function to find the next nearest vendor using PostGIS distance query.
+    """
+    pickup_location = Point(pickup.longitude, pickup.latitude, srid=4326)
+
+    # Generate a cache key based on location and excluded vendors
+    cache_key = f"next_nearest_vendors_{pickup.latitude}_{pickup.longitude}_{'_'.join(map(str, excluded_vendor_ids))}"
+    cached_vendors = cache.get(cache_key)
+    
+    if cached_vendors:
+        print(f"Cached value found: {cached_vendors}")
+        return cached_vendors
+
+    # Get vendors sorted by distance, excluding rejected vendors and within 5km radius
+    nearest_vendors = VendorLocation.objects.exclude(vendor__id__in=excluded_vendor_ids) \
+        .filter(is_active=True, location__distance_lte=(pickup_location, D(km=5))) \
+        .annotate(distance=Distance('location', pickup_location)) \
+        .order_by('distance')[:3]
+
+    if nearest_vendors.exists():
+        vendor_ids = [vendor.vendor.id for vendor in nearest_vendors]
+        # Cache the result
+        cache.set(cache_key, vendor_ids, CACHE_TIMEOUT) # Cache vendors
+        logger.info(f'Caching vendors for key: {cache_key}, value: {vendor_ids}')
+        print(f"Cached value set: {vendor_ids}")
+
+        return vendor_ids[0]
     else:
         return None
     
-
-
 @shared_task
 def refresh_tokens():
     now = timezone.now()
@@ -145,10 +199,11 @@ def reassign_pickup_request(pickup_id):
 
             # Find the next nearest vendor who has not rejected the request
             excluded_vendor_ids = list(pickup.rejected_vendors.values_list('id', flat=True))
-            next_vendor = find_next_nearest_vendor(pickup, excluded_vendor_ids)
+            next_vendor_id = find_next_nearest_vendor(pickup, excluded_vendor_ids)
 
-            if next_vendor:
+            if next_vendor_id:
                 # Reassign to the next nearest vendor
+                next_vendor = VendorAuth.objects.get(id=next_vendor_id)
                 pickup.vendor = next_vendor
                 pickup.status = 'Request Sent'
                 pickup.created_at = timezone.now()  # Reset the timer for the new vendor
@@ -190,20 +245,20 @@ def reassign_pickup_request(pickup_id):
         pass
 
 
-def find_next_nearest_vendor(pickup, excluded_vendor_ids):
-    """
-    Helper function to find the next nearest vendor.
-    """
-    nearest_vendor = None
-    nearest_distance = None
+# def find_next_nearest_vendor(pickup, excluded_vendor_ids):
+#     """
+#     Helper function to find the next nearest vendor.
+#     """
+#     nearest_vendor = None
+#     nearest_distance = None
 
-    for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
-        distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
-        if nearest_distance is None or distance < nearest_distance:
-            nearest_distance = distance
-            nearest_vendor = location.vendor
+#     for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
+#         distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
+#         if nearest_distance is None or distance < nearest_distance:
+#             nearest_distance = distance
+#             nearest_vendor = location.vendor
     
-    return nearest_vendor
+#     return nearest_vendor
 
 
 def get_user_token(user):

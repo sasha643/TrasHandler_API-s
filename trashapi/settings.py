@@ -23,6 +23,9 @@ APPS_DIR = BASE_DIR / "trashapi"
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
 
+
+GDAL_LIBRARY_PATH = r"C:\OSGeo4W\bin\gdal309.dll"
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
@@ -48,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'django.contrib.sites',
     'rest_framework',
     'rest_framework.authtoken',
@@ -59,8 +63,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'corsheaders',
-
-    
+    'redisboard',
+    'debug_toolbar',
 ]
 
 
@@ -111,6 +115,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -162,7 +167,7 @@ TEMPLATES = [
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'Trial',
         'USER': 'postgres',
         'PASSWORD': 'Benyo0310',
@@ -272,12 +277,20 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
 
 # django setting.
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+#         'LOCATION': 'my_cache_table',
+#     }
+# }
+
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'my_cache_table',
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379',
     }
 }
+
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # CELERY_ACCEPT_CONTENT = ['json']
@@ -307,3 +320,8 @@ LOGGING = {
         },
     },
 }
+
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]

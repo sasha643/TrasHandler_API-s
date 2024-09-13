@@ -216,10 +216,45 @@ class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
         serializer.save(user=self.request.user)
 
 
+class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    queryset = VendorCompleteProfile.objects.all()
+    serializer_class = VendorCompleteProfileSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            vendor = VendorAuth.objects.get(id=request.user.id)
+        except VendorAuth.DoesNotExist:
+            return Response({"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data.copy()
+        data['vendor'] = vendor.id
+        
+        try:
+            vendor_complete_profile = VendorCompleteProfile.objects.get(vendor=vendor)
+            # If an entry exists, update it
+            serializer = self.get_serializer(vendor_complete_profile, data=data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+        except VendorCompleteProfile.DoesNotExist:
+            # If no entry exists, create a new one
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_create(self, serializer):
+        serializer.save()
 class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     queryset = CustomerLocation.objects.all()
     serializer_class = CustomerLocationSerializer
-    permission_classes = [IsAuthenticated]
+    
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -272,48 +307,10 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, 
             CustomerLocation.objects.filter(customer=serializer.instance.customer, is_active=True).update(is_active=False)
         serializer.save(customer=customer)
 
-
-class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
-    queryset = VendorCompleteProfile.objects.all()
-    serializer_class = VendorCompleteProfileSerializer
-    parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated]
-
-    def create(self, request, *args, **kwargs):
-        try:
-            vendor = VendorAuth.objects.get(id=request.user.id)
-        except VendorAuth.DoesNotExist:
-            return Response({"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        data = request.data.copy()
-        data['vendor'] = vendor.id
-        
-        try:
-            vendor_complete_profile = VendorCompleteProfile.objects.get(vendor=vendor)
-            # If an entry exists, update it
-            serializer = self.get_serializer(vendor_complete_profile, data=data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-        except VendorCompleteProfile.DoesNotExist:
-            # If no entry exists, create a new one
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    def perform_update(self, serializer):
-        serializer.save()
-
-    def perform_create(self, serializer):
-        serializer.save()
-
-
 class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorLocation.objects.all()
     serializer_class = VendorLocationSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
