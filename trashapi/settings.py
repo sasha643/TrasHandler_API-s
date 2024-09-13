@@ -164,7 +164,7 @@ TEMPLATES = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Trashandler',                      # Replace with your database name
+        'NAME': 'postgres',                      # Replace with your database name
         'USER': 'postgres',                  # Replace with your database username
         'PASSWORD': 'postgres',         # Replace with your database password
         'HOST': '3.108.52.92',             # Replace with your public IP address of local machine
