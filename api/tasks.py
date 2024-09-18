@@ -22,6 +22,8 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.core.cache import cache
+from geopy.distance import geodesic
+from kafka import KafkaConsumer
 
 
 logger = logging.getLogger(__name__)
@@ -78,9 +80,15 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
     cached_time = end_cached - start_cached
     
     if cached_vendors:
-        print(f"Cached value found: {cached_vendors}")
-        print(f"Execution time for cached query: {cached_time} seconds")
-        return cached_vendors
+        remaining_vendors = [vendor_id for vendor_id in cached_vendors if vendor_id not in excluded_vendor_ids]
+        
+        if remaining_vendors:
+            print(f"Cached value found: {remaining_vendors}")
+            print(f"Execution time for cached query: {cached_time} seconds")
+            return remaining_vendors
+        else:
+            # If no remaining vendors in cache, return None to indicate no available vendors
+            return None
 
     # Get active vendors within 5km sorted by distance, excluding those already rejected
     start_normal = time.time()
@@ -115,8 +123,16 @@ def find_next_nearest_vendor(pickup, excluded_vendor_ids):
     cached_vendors = cache.get(cache_key)
     
     if cached_vendors:
-        print(f"Cached value found: {cached_vendors}")
-        return cached_vendors
+        remaining_vendors = [vendor_id for vendor_id in cached_vendors if vendor_id not in excluded_vendor_ids]
+        
+        if remaining_vendors:
+            print(f"Cached value found: {remaining_vendors}")
+            # print(f"Execution time for cached query: {cached_time} seconds")
+            return remaining_vendors
+        else:
+            # If no remaining vendors in cache, return None to indicate no available vendors
+            return None
+    
 
     # Get vendors sorted by distance, excluding rejected vendors and within 5km radius
     nearest_vendors = VendorLocation.objects.exclude(vendor__id__in=excluded_vendor_ids) \
@@ -244,28 +260,133 @@ def reassign_pickup_request(pickup_id):
         # Handle the case where the pickup request was deleted
         pass
 
+@shared_task
+def track_vendor_location_task():
+    """
+    Task to track the vendor's location until they reach the customer's location.
+    """
+    consumer = KafkaConsumer(
+        'vendor-location',
+        bootstrap_servers=['localhost:9092'],
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        group_id='location-tracking-group',
+        value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+    )
 
-# def find_next_nearest_vendor(pickup, excluded_vendor_ids):
-#     """
-#     Helper function to find the next nearest vendor.
-#     """
-#     nearest_vendor = None
-#     nearest_distance = None
+    sample_data = [
+        {'vendor_id': 1772, 'latitude': 12.9806, 'longitude': 77.5945}, #1km away
+        {'vendor_id': 1772, 'latitude': 12.9750, 'longitude': 77.5945}, #0.7km away
+        {'vendor_id': 1772, 'latitude': 12.9730, 'longitude': 77.5945}, #0.5km away
+        {'vendor_id': 1772, 'latitude': 12.9716, 'longitude': 77.5945}, #0.3km away
+        {'vendor_id': 1772, 'latitude': 12.9715987, 'longitude': 77.5945627}, #0km away
+    ]
 
-#     for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
-#         distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
-#         if nearest_distance is None or distance < nearest_distance:
-#             nearest_distance = distance
-#             nearest_vendor = location.vendor
-    
-#     return nearest_vendor
+    for vendor_data in sample_data:
+        vendor_id = vendor_data['vendor_id']
+        vendor_lat = vendor_data['latitude']
+        vendor_lng = vendor_data['longitude']
+
+        # Fetch vendor's pickup request and the customer location
+        try:
+            pickup = PickupRequest.objects.filter(vendor_id=vendor_id, status='Accepted').first()
+            customer_location = (pickup.latitude, pickup.longitude)
+            vendor_location = (vendor_lat, vendor_lng)
+
+            # Calculate the distance between vendor and customer
+            distance_km = geodesic(vendor_location, customer_location).km
+            # Notification.objects.create(
+            #     user=pickup.customer,
+            #     message=f"The vendor distance from you is {distance_km:.2f} km",
+            #     relevant=True,
+            #     recipient_type='customer'
+            # )
+            # Check if vendor is within 1 km
+            if distance_km == 1.0:
+                # Notify if vendor is within 1km but not yet arrived
+                Notification.objects.create(
+                    user=pickup.customer,
+                    message=f"The vendor is now {distance_km:.2f} km away. Prepare for pickup!",
+                    relevant=True,
+                    recipient_type='customer'
+                )
+                print(f"Vendor {vendor_id} is within 1km of the customer.")
+
+            # Check if the vendor has arrived (consider distance close to 0)
+            if distance_km < 0.01:
+                # Vendor has arrived at the customer's location
+                Notification.objects.create(
+                    user=pickup.customer,
+                    message="The vendor has arrived at your exact location. Pickup is ready!",
+                    relevant=True,
+                    recipient_type='customer'
+                )
+
+        except PickupRequest.DoesNotExist:
+            print(f"No active pickup request found for vendor {vendor_id}")
 
 
-def get_user_token(user):
-    try:
-        return UserToken.objects.get(user=user)
-    except UserToken.DoesNotExist:
-        return None
+
+    # try:
+    #     pickup = PickupRequest.objects.get(id=pickup_id)
+    #     if pickup.status != 'Accepted':
+    #         print(f"Pickup request {pickup_id} is not Accepted. Skipping tracking.")
+    #         return
+        
+    #     vendor_id = pickup.vendor.id
+    #     vendor_location = VendorLocation.objects.get(id=vendor_id)
+    #     customer_location = Point(pickup.longitude, pickup.latitude, srid=4326)
+
+    #     # Calculate the distance between vendor and customer
+    #     vendor_lat = vendor_location.location.y
+    #     vendor_lng = vendor_location.location.x
+    #     customer_lat = customer_location.y
+    #     customer_lng = customer_location.x
+
+    #     vendor_coords = (vendor_lat, vendor_lng)
+    #     customer_coords = (customer_lat, customer_lng)
+
+    #     distance_km = geodesic(vendor_coords, customer_coords).km
+    #     logger.info(f'distance between vendor and destination is {distance_km} km')
+
+    #     Notification.objects.create(
+    #             user=pickup.customer,
+    #             message=f"The vendor distance from you is {distance_km} km",
+    #             relevant=True,
+    #             recipient_type='customer'
+    #         )
+
+    #     if distance_km <= 1:
+    #         # Notify the customer when vendor is within 1km
+    #         Notification.objects.create(
+    #             user=pickup.customer,
+    #             message="The vendor is now within 1km of your location. Prepare for pickup!",
+    #             relevant=True,
+    #             recipient_type='customer'
+    #         )
+    #         logger.info(f'Vendor is within 1km. Distance: {distance_km} km')
+    #         print(f"Vendor is within 1km. Distance: {distance_km} km")
+    #     elif distance_km == 0:
+    #         # Vendor has reached the customer's location
+    #         Notification.objects.create(
+    #             user=pickup.customer,
+    #             message="The vendor has arrived at your location. Pickup is ready!",
+    #             relevant=True,
+    #             recipient_type='customer'
+    #         )
+
+    #         print("Vendor has arrived at the customer's location.")
+    #         return
+
+    #     # If vendor is not within 1km, continue tracking
+    #     print(f"Vendor is {distance_km} km away from customer. Continuing to track...")
+
+    #     # Re-run the task to check again after 30 seconds
+    #     # track_vendor_location_task.apply_async((pickup_id,), countdown=300)
+
+    # except PickupRequest.DoesNotExist:
+    #     print("PickupRequest does not exist")
+    #     return
 
 # @shared_task()
 # def fetch_access_token_for_user(provided_token):

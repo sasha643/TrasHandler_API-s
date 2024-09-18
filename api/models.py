@@ -144,6 +144,7 @@ class VendorLocation(models.Model):
     def __str__(self):
         return f'{self.vendor.name} - {self.location}'
     
+    
 class PickupRequest(models.Model):
     STATUS_CHOICES = [
         ('Request Sent', 'Request Sent'),

@@ -8,7 +8,7 @@ from .models import PickupRequest, VendorAuth, CustomerAuth, Notification, UserT
 from .functions import haversine
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
-from api.tasks import assign_vendor_task
+from api.tasks import assign_vendor_task, track_vendor_location_task
 import websockets
 
 
@@ -227,6 +227,7 @@ class UpdatePickupRequestConsumer(AsyncWebsocketConsumer):
                 "pickup_request_id": pickup_request.id,
                 "status": new_status
             }
+            
         except VendorAuth.DoesNotExist:
             return {'error': 'Vendor profile not found'}
         except PickupRequest.DoesNotExist:

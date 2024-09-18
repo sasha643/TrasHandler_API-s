@@ -251,21 +251,32 @@ class VendorCompleteProfileViewSet(viewsets.GenericViewSet, mixins.CreateModelMi
 
     def perform_create(self, serializer):
         serializer.save()
+        
 class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.UpdateModelMixin):
     queryset = CustomerLocation.objects.all()
     serializer_class = CustomerLocationSerializer
     
-
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         try:
             customer = CustomerAuth.objects.get(id=request.user.id)
         except CustomerAuth.DoesNotExist:
             return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if customer already has a location
+        customer_location = CustomerLocation.objects.filter(customer=customer).first()
+
+        if customer_location:
+            # If a location exists, update the existing entry instead of creating a new one
+            serializer = self.get_serializer(customer_location, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            location = serializer.save(customer=customer)
+        else:
+            # Create a new location entry if none exists
+            location = serializer.save(customer=customer)
         
-        location = serializer.save(customer=customer)
         response_data = self.get_serializer(location).data
         response_data['id'] = customer.id
         
@@ -281,6 +292,7 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, 
         except CustomerAuth.DoesNotExist:
             return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        # Update the existing location
         location = serializer.save(customer=customer)
         response_data = self.get_serializer(location).data
         response_data['name'] = location.customer.name
@@ -293,6 +305,7 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, 
         except CustomerAuth.DoesNotExist:
             raise serializers.ValidationError({'error': 'Customer not found'})
         
+        # Ensure no multiple active locations
         if serializer.validated_data.get('is_active'):
             CustomerLocation.objects.filter(customer=customer, is_active=True).update(is_active=False)
         serializer.save(customer=customer)
@@ -302,10 +315,11 @@ class CustomerLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, 
             customer = CustomerAuth.objects.get(id=self.request.user.id)
         except CustomerAuth.DoesNotExist:
             raise serializers.ValidationError({'error': 'Customer not found'})
-        
+
         if serializer.validated_data.get('is_active'):
             CustomerLocation.objects.filter(customer=serializer.instance.customer, is_active=True).update(is_active=False)
         serializer.save(customer=customer)
+
 
 class VendorLocationViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = VendorLocation.objects.all()

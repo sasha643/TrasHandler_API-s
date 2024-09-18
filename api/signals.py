@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from asgiref.sync import async_to_sync
-from .models import Notification, PickupRequest, UserToken
-from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification
+from .models import *
+from .tasks import *
 
 
 import secrets
@@ -28,6 +28,8 @@ def schedule_reassignment(sender, instance, created, **kwargs):
     if created and instance.status == 'Request Sent':
         # Start the reassignment process immediately upon creation
         reassign_pickup_request.apply_async((instance.id,), countdown=60)
+    # elif instance.status == 'Accepted':
+    #     track_vendor_location_task.delay()
 
 @receiver(post_save, sender=UserToken)
 def trigger_token_refresh_notification(sender, instance, **kwargs):

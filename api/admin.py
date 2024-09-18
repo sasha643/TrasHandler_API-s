@@ -13,6 +13,7 @@ class CustomerAuthModelAdmin(admin.ModelAdmin):
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'mobile_no']
+    search_fields = ['name',]
 
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
@@ -32,6 +33,7 @@ class VendorLocationModelAdmin(OSMGeoAdmin):
     default_lat = 0  # Default latitude (example: for centering the map)
     default_zoom = 12  # Default zoom level of the map
     list_display = ['id', 'vendor', 'location', 'is_active']
+    search_fields = ['vendor__name',]
 
 @admin.register(CustomerLocation)
 class CustomerLocationModelAdmin(OSMGeoAdmin):
@@ -39,6 +41,7 @@ class CustomerLocationModelAdmin(OSMGeoAdmin):
     default_lat = 0  # Default latitude (example: for centering the map)
     default_zoom = 12  # Default zoom level of the map
     list_display = ['id', 'customer', 'location', 'is_active']
+    search_fields = ['customer__name',]
 
 
 class PickupRequestModelAdmin(admin.ModelAdmin):

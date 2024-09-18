@@ -18,6 +18,15 @@ app.conf.beat_schedule = {
         'task': 'api.tasks.refresh_tokens',
         'schedule': crontab(minute='*/10'),  # Run every minutes
     },
+    'track_accepted_pickups_morning': {
+        'task': 'api.tasks.track_vendor_location_task',
+        'schedule': crontab(minute='0-59', hour='11', day_of_week='*'),  # 11:00 AM to 12:00 PM IST
+    },
+    # Evening Slot: 5:00 PM - 6:00 PM IST
+    'track_accepted_pickups_evening': {
+        'task': 'api.tasks.track_vendor_location_task',
+        'schedule': crontab(minute='0-59', hour='17', day_of_week='*'),  # 5:00 PM to 6:00 PM IST
+    },
 
 }
 
