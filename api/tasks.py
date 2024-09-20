@@ -81,24 +81,18 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
     
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def refresh_tokens(self):
+@shared_task
+def refresh_tokens():
     now = timezone.now()
-    expiration_threshold = now - timedelta(minutes=5)  # Tokens older than 5 minutes
+    expiration_threshold = timedelta(minutes=5)
 
-    # Fetch tokens that need refreshing
-    tokens = UserToken.objects.filter(token_created_at__lte=expiration_threshold)
-    
-    logger.info(f"Starting token refresh task. Found {tokens.count()} tokens to refresh.")
-
-    tokens_to_update = []
+    # Filter tokens that are about to expire
+    tokens = UserToken.objects.filter(token_created_at__lte=now - expiration_threshold)
     
     for token_entry in tokens:
-        # Refresh token using the refresh token endpoint
-        refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
-        payload = {
-            'refresh': token_entry.refresh_token
-        }
+        refresh_url = 'http://127.0.0.1:8000/auth/token/refresh/'
+        payload = {'refresh': token_entry.refresh_token}
+        
         try:
             response = requests.post(refresh_url, data=payload)
             response_data = response.json()
@@ -107,24 +101,17 @@ def refresh_tokens(self):
                 new_access_token = response_data.get('access')
                 new_refresh_token = response_data.get('refresh')
 
-                # Update the tokens in the list
+                # Update token data in a single transaction
                 token_entry.access_token = new_access_token
                 token_entry.refresh_token = new_refresh_token
                 token_entry.token_created_at = now
-                tokens_to_update.append(token_entry)
+                token_entry.save()
 
-                logger.info(f"Refreshed tokens for {token_entry.user.name}")
+                logger.info(f"Refreshed tokens for user {token_entry.user.name}")
             else:
                 logger.error(f"Failed to refresh token for {token_entry.user.name}: {response_data.get('detail')}")
-        except requests.RequestException as e:
-            logger.error(f"Network error while refreshing token for {token_entry.user.name}: {str(e)}. Retrying...")
-            raise self.retry(exc=e)
         except Exception as e:
-            logger.error(f"Error occurred while refreshing token for {token_entry.user.name}: {str(e)}")
-
-    # Bulk update tokens to reduce database hits
-    if tokens_to_update:
-        UserToken.objects.bulk_update(tokens_to_update, ['access_token', 'refresh_token', 'token_created_at'])
+            logger.error(f"Error refreshing token for {token_entry.user.name}: {str(e)}")
 
 @shared_task
 def reassign_pickup_request(pickup_id):
