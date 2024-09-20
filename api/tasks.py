@@ -90,7 +90,7 @@ def refresh_tokens():
     tokens = UserToken.objects.filter(token_created_at__lte=now - expiration_threshold)
     
     for token_entry in tokens:
-        refresh_url = 'http://127.0.0.1:8000/auth/token/refresh/'
+        refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
         payload = {'refresh': token_entry.refresh_token}
         
         try:
