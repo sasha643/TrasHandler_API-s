@@ -39,4 +39,5 @@ def trigger_token_refresh_notification(sender, instance, **kwargs):
         user_id = instance.user.id
         access_token = instance.access_token
         send_refreshed_token_notification.delay(user_id, access_token)
+        refresh_tokens.apply_async((user_id,), countdown=300)
 
