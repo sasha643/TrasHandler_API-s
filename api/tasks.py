@@ -22,7 +22,7 @@ import redis
 
 
 
-redis_client = redis.StrictRedis(host='3.108.52.92:8000', port=6379, db=0)
+redis_client = redis.StrictRedis(host='172.17.0.2', port=6379, db=0)
 logger = logging.getLogger(__name__)
 
 @shared_task
