@@ -33,10 +33,28 @@ def schedule_reassignment(sender, instance, created, **kwargs):
         # Start the reassignment process immediately upon creation
         reassign_pickup_request.apply_async((instance.id,), countdown=60)
 
+# @receiver(post_save, sender=UserToken)
+# def trigger_token_refresh_notification(sender, instance, **kwargs):
+#     if kwargs.get('created', False) is False:  # Trigger only on updates, not creation
+#         user_id = instance.user.id
+#         access_token = instance.access_token
+#         send_refreshed_token_notification.delay(user_id, access_token)
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
 @receiver(post_save, sender=UserToken)
 def trigger_token_refresh_notification(sender, instance, **kwargs):
-    if kwargs.get('created', False) is False:  # Trigger only on updates, not creation
-        user_id = instance.user.id
-        access_token = instance.access_token
-        send_refreshed_token_notification.delay(user_id, access_token)
+    user_id = instance.user.id
+    access_token = instance.access_token
+
+    lock_key = f'user_token_lock_{user_id}'
+    lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+
+    try:
+        if lock.acquire(blocking=False):  # Acquire lock without blocking
+            # Trigger sending the refreshed token notification asynchronously
+            send_refreshed_token_notification.delay(user_id, access_token)
+        else:
+            logger.warning(f"Token notification for user_id {user_id} is already being processed.")
+    finally:
+        lock.release()  # Release the lock
 
