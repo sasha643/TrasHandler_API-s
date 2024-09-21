@@ -47,9 +47,11 @@ def send_notification_task(user_id, message):
 def send_refreshed_token_notification(user_id, access_token):
     lock_key = f'user_token_lock_{user_id}'
     lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+    acquired = False
 
     try:
         if lock.acquire(blocking=False):  # Try to acquire the lock without blocking
+            acquired = True
             logger.info(f"Sending refreshed token to user_id: {user_id}")
             channel_layer = get_channel_layer()
             group_name = f'Token_{user_id}'
@@ -67,7 +69,9 @@ def send_refreshed_token_notification(user_id, access_token):
     except Exception as e:
         logger.error(f"Error sending refreshed token: {e}")
     finally:
-        lock.release()  # Release the lock
+        if acquired:
+            lock.release()  # Release the lock only if it was acquired
+
 
 
 # @shared_task
@@ -122,9 +126,11 @@ def refresh_tokens():
         user_id = token_entry.user.id
         lock_key = f'user_token_lock_{user_id}'
         lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+        acquired = False
         
         try:
             if lock.acquire(blocking=False):  # Try to acquire lock without blocking
+                acquired = True
                 token_age = now - token_entry.token_created_at
                 time_until_expiration = access_token_lifetime - token_age
 
@@ -156,7 +162,9 @@ def refresh_tokens():
             else:
                 logger.warning(f"Token for user_id {user_id} is already being processed.")
         finally:
-            lock.release()  # Release the lock
+            if acquired:
+                lock.release()  # Release the lock only if it was acquired
+
             
 # @shared_task
 # def refresh_tokens():
