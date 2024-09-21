@@ -39,7 +39,7 @@ def schedule_reassignment(sender, instance, created, **kwargs):
 #         user_id = instance.user.id
 #         access_token = instance.access_token
 #         send_refreshed_token_notification.delay(user_id, access_token)
-redis_client = redis.StrictRedis(host='3.108.52.92:8000', port=6379, db=0)
+redis_client = redis.StrictRedis(host='172.17.0.2', port=6379, db=0)
 
 @receiver(post_save, sender=UserToken)
 def trigger_token_refresh_notification(sender, instance, **kwargs):
