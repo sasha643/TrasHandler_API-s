@@ -92,7 +92,7 @@ def refresh_tokens():
         token_age = now - token_entry.token_created_at
         if token_age >= expiration_threshold:
             # Refresh token using the refresh token endpoint
-            refresh_url = 'http://127.0.0.1:8000/auth/token/refresh/'
+            refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
             payload = {
                 'refresh': token_entry.refresh_token
             }
