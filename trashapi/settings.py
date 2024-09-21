@@ -211,7 +211,8 @@ TIME_ZONE = 'Asia/Kolkata'
 
 # Ensure Django uses timezone-aware datetimes
 
-USE_I18N = True
+#USE_I18N = True
+USE_TZ = True
 
 
 
