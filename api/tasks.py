@@ -110,10 +110,11 @@ def refresh_tokens():
                     new_refresh_token = response_data.get('refresh')
 
                     # Update the tokens in the database
-                    token_entry.access_token = new_access_token
-                    token_entry.refresh_token = new_refresh_token
-                    token_entry.token_created_at = now  # Update the time to now
-                    token_entry.save()
+                    with transaction.atomic():
+                        token_entry.access_token = new_access_token
+                        token_entry.refresh_token = new_refresh_token
+                        token_entry.token_created_at = now  # Update the time to now
+                        token_entry.save()
 
                     logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
                 else:
