@@ -83,7 +83,7 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
 
 @shared_task
 def refresh_tokens():
-    access_token_lifetime = timedelta(minutes=15)  # From your SIMPLE_JWT config
+    access_token_lifetime = timedelta(minutes=10)  # From your SIMPLE_JWT config
     expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
 
     tokens = UserToken.objects.all()
