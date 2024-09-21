@@ -83,16 +83,21 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
 
 @shared_task
 def refresh_tokens():
-    now = timezone.now()
-    expiration_threshold = timedelta(minutes=5)  # Refresh tokens minutes before they expire
+    access_token_lifetime = timedelta(minutes=15)  # From your SIMPLE_JWT config
+    expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
 
     tokens = UserToken.objects.all()
+    now = timezone.now()  # Get current time with timezone awareness
+
     for token_entry in tokens:
-        # Check if the token is near expiration
+        # Calculate the token's age
         token_age = now - token_entry.token_created_at
-        if token_age >= expiration_threshold:
+        time_until_expiration = access_token_lifetime - token_age
+
+        # Check if the token is close to expiration (less than 5 minutes left)
+        if time_until_expiration <= expiration_threshold:
             # Refresh token using the refresh token endpoint
-            refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
+            refresh_url = 'http://3.108.52.92:8000//auth/token/refresh/'
             payload = {
                 'refresh': token_entry.refresh_token
             }
@@ -103,20 +108,20 @@ def refresh_tokens():
                 if response.status_code == 200:
                     new_access_token = response_data.get('access')
                     new_refresh_token = response_data.get('refresh')
-                    
+
                     # Update the tokens in the database
                     token_entry.access_token = new_access_token
                     token_entry.refresh_token = new_refresh_token
-                    token_entry.token_created_at = now
+                    token_entry.token_created_at = now  # Update the time to now
                     token_entry.save()
 
-                    logger.info(f"Refreshed tokens for {token_entry.user.name}")
+                    logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
                 else:
-                    logger.error(f"Failed to refresh token for {token_entry.user.name}: {response_data.get('detail')}")
+                    logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
             except Exception as e:
-                logger.error(f"Error occurred while refreshing token for {token_entry.user.name}: {str(e)}")
+                logger.error(f"Error occurred while refreshing tokens for {token_entry.user.name}: {str(e)}")
         else:
-            logger.info(f"Token age for {token_entry.user.name} is less than expiration threshold, no refresh needed.")
+            logger.info(f"Token for {token_entry.user.name} is not close to expiration, no refresh needed.")
 
 @shared_task
 def reassign_pickup_request(pickup_id):
