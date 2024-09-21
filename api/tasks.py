@@ -21,7 +21,7 @@ from api.models import UserToken
 
 
 
-
+redis_client = redis.StrictRedis(host='3.108.52.92:8000', port=6379, db=0)
 logger = logging.getLogger(__name__)
 
 @shared_task
@@ -41,22 +41,51 @@ def send_notification_task(user_id, message):
     except Exception as e:
         logger.error(f"Error sending notification: {e}")
 
+
 @shared_task
 def send_refreshed_token_notification(user_id, access_token):
+    lock_key = f'user_token_lock_{user_id}'
+    lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+
     try:
-        logger.info(f"Sending refreshed token to user_id: {user_id}")
-        channel_layer = get_channel_layer()
-        group_name = f'Token_{user_id}'
-        async_to_sync(channel_layer.group_send)(
-            group_name,
-            {
-                'type': 'send_token',
-                'access_token': access_token,
-            }
-        )
-        logger.info(f"Refreshed token sent successfully to {group_name}.")
+        if lock.acquire(blocking=False):  # Try to acquire the lock without blocking
+            logger.info(f"Sending refreshed token to user_id: {user_id}")
+            channel_layer = get_channel_layer()
+            group_name = f'Token_{user_id}'
+
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_token',
+                    'access_token': access_token,
+                }
+            )
+            logger.info(f"Refreshed token sent successfully to {group_name}.")
+        else:
+            logger.warning(f"Token update for user_id: {user_id} is already being processed.")
     except Exception as e:
         logger.error(f"Error sending refreshed token: {e}")
+    finally:
+        lock.release()  # Release the lock
+
+
+# @shared_task
+# def send_refreshed_token_notification(user_id, access_token):
+#     try:
+#         logger.info(f"Sending refreshed token to user_id: {user_id}")
+#         channel_layer = get_channel_layer()
+#         group_name = f'Token_{user_id}'
+#         async_to_sync(channel_layer.group_send)(
+#             group_name,
+#             {
+#                 'type': 'send_token',
+#                 'access_token': access_token,
+#             }
+#         )
+#         logger.info(f"Refreshed token sent successfully to {group_name}.")
+#     except Exception as e:
+#         logger.error(f"Error sending refreshed token: {e}")
+
 @shared_task
 def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[]):
     try:
@@ -80,49 +109,97 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
         return None
     
 
-
 @shared_task
 def refresh_tokens():
     access_token_lifetime = timedelta(minutes=10)  # From your SIMPLE_JWT config
     expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
 
     tokens = UserToken.objects.all()
-    now = timezone.now()  # Get current time with timezone awareness
+    now = timezone.now()  # Current time with timezone awareness
 
     for token_entry in tokens:
-        # Calculate the token's age
-        token_age = now - token_entry.token_created_at
-        time_until_expiration = access_token_lifetime - token_age
+        user_id = token_entry.user.id
+        lock_key = f'user_token_lock_{user_id}'
+        lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+        
+        try:
+            if lock.acquire(blocking=False):  # Try to acquire lock without blocking
+                token_age = now - token_entry.token_created_at
+                time_until_expiration = access_token_lifetime - token_age
 
-        # Check if the token is close to expiration (less than 5 minutes left)
-        if time_until_expiration <= expiration_threshold:
-            # Refresh token using the refresh token endpoint
-            refresh_url = 'http://3.108.52.92:8000//auth/token/refresh/'
-            payload = {
-                'refresh': token_entry.refresh_token
-            }
-            try:
-                response = requests.post(refresh_url, data=payload)
-                response_data = response.json()
+                if time_until_expiration <= expiration_threshold:
+                    # Call the token refresh endpoint
+                    refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
+                    payload = {'refresh': token_entry.refresh_token}
+                    try:
+                        response = requests.post(refresh_url, data=payload)
+                        response_data = response.json()
 
-                if response.status_code == 200:
-                    new_access_token = response_data.get('access')
-                    new_refresh_token = response_data.get('refresh')
+                        if response.status_code == 200:
+                            # Update the tokens
+                            new_access_token = response_data.get('access')
+                            new_refresh_token = response_data.get('refresh')
 
-                    # Update the tokens in the database
-                    with transaction.atomic():
-                        token_entry.access_token = new_access_token
-                        token_entry.refresh_token = new_refresh_token
-                        token_entry.token_created_at = now  # Update the time to now
-                        token_entry.save()
+                            token_entry.access_token = new_access_token
+                            token_entry.refresh_token = new_refresh_token
+                            token_entry.token_created_at = now  # Update creation time
+                            token_entry.save()
 
-                    logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
+                            logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
+                        else:
+                            logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
+                    except Exception as e:
+                        logger.error(f"Error while refreshing tokens for {token_entry.user.name}: {str(e)}")
                 else:
-                    logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
-            except Exception as e:
-                logger.error(f"Error occurred while refreshing tokens for {token_entry.user.name}: {str(e)}")
-        else:
-            logger.info(f"Token for {token_entry.user.name} is not close to expiration, no refresh needed.")
+                    logger.info(f"Token for {token_entry.user.name} is not near expiration. No refresh needed.")
+            else:
+                logger.warning(f"Token for user_id {user_id} is already being processed.")
+        finally:
+            lock.release()  # Release the lock
+            
+# @shared_task
+# def refresh_tokens():
+#     access_token_lifetime = timedelta(minutes=10)  # From your SIMPLE_JWT config
+#     expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
+
+#     tokens = UserToken.objects.all()
+#     now = timezone.now()  # Get current time with timezone awareness
+
+#     for token_entry in tokens:
+#         # Calculate the token's age
+#         token_age = now - token_entry.token_created_at
+#         time_until_expiration = access_token_lifetime - token_age
+
+#         # Check if the token is close to expiration (less than 5 minutes left)
+#         if time_until_expiration <= expiration_threshold:
+#             # Refresh token using the refresh token endpoint
+#             refresh_url = 'http://3.108.52.92:8000//auth/token/refresh/'
+#             payload = {
+#                 'refresh': token_entry.refresh_token
+#             }
+#             try:
+#                 response = requests.post(refresh_url, data=payload)
+#                 response_data = response.json()
+
+#                 if response.status_code == 200:
+#                     new_access_token = response_data.get('access')
+#                     new_refresh_token = response_data.get('refresh')
+
+#                     # Update the tokens in the database
+#                     with transaction.atomic():
+#                         token_entry.access_token = new_access_token
+#                         token_entry.refresh_token = new_refresh_token
+#                         token_entry.token_created_at = now  # Update the time to now
+#                         token_entry.save()
+
+#                     logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
+#                 else:
+#                     logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
+#             except Exception as e:
+#                 logger.error(f"Error occurred while refreshing tokens for {token_entry.user.name}: {str(e)}")
+#         else:
+#             logger.info(f"Token for {token_entry.user.name} is not close to expiration, no refresh needed.")
+
 
 @shared_task
 def reassign_pickup_request(pickup_id):
