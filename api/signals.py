@@ -48,13 +48,18 @@ def trigger_token_refresh_notification(sender, instance, **kwargs):
 
     lock_key = f'user_token_lock_{user_id}'
     lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
+    acquired = False
 
     try:
-        if lock.acquire(blocking=False):  # Acquire lock without blocking
+        # Attempt to acquire the lock without blocking
+        if lock.acquire(blocking=False):
+            acquired = True
             # Trigger sending the refreshed token notification asynchronously
             send_refreshed_token_notification.delay(user_id, access_token)
         else:
             logger.warning(f"Token notification for user_id {user_id} is already being processed.")
     finally:
-        lock.release()  # Release the lock
+        if acquired:
+            lock.release()  # Only release if it was successfully acquired
+
 
