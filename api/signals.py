@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from asgiref.sync import async_to_sync
 from .models import Notification, PickupRequest, UserToken
 from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification
-
+import redis
 
 import secrets
 
