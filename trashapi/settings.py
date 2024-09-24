@@ -255,31 +255,35 @@ CORS_ALLOW_METHODS = [
 ]
 
 
+# settings.py
+
+# Channel Layers Configuration for RabbitMQ
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'BACKEND': 'channels_rabbitmq.RabbitmqChannelLayer',
         'CONFIG': {
-            "hosts": [('3.108.52.92', 6379)],
+            'hosts': [
+                {'host': '3.108.52.92', 'port': 5672, 'userid': 'guest', 'password': 'guest'},
+            ],
         },
     },
 }
 
-
-
-CELERY_BROKER_URL = 'redis://172.17.0.2:6379/0'
-
+# Celery Configuration
+CELERY_BROKER_URL = 'amqp://guest:guest@3.108.52.92:5672//'
 CELERY_RESULT_BACKEND = 'django-db'
 
-# pick which cache from the CACHES setting.
+# Cache settings
 CELERY_CACHE_BACKEND = 'default'
 
-# django setting.
+# Django cache configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'my_cache_table',
     }
 }
+
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # CELERY_ACCEPT_CONTENT = ['json']
