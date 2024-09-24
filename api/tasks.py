@@ -18,11 +18,8 @@ from jwt import InvalidTokenError, ExpiredSignatureError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from api.models import UserToken
-import redis
 
 
-
-redis_client = redis.StrictRedis(host='172.17.0.2', port=6379, db=0)
 logger = logging.getLogger(__name__)
 
 @shared_task
@@ -45,32 +42,22 @@ def send_notification_task(user_id, message):
 
 @shared_task
 def send_refreshed_token_notification(user_id, access_token):
-    lock_key = f'user_token_lock_{user_id}'
-    lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
-    acquired = False
-
     try:
-        if lock.acquire(blocking=False):  # Try to acquire the lock without blocking
-            acquired = True
-            logger.info(f"Sending refreshed token to user_id: {user_id}")
-            channel_layer = get_channel_layer()
-            group_name = f'Token_{user_id}'
+        logger.info(f"Sending refreshed token to user_id: {user_id}")
+        channel_layer = get_channel_layer()
+        group_name = f'Token_{user_id}'
 
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    'type': 'send_token',
-                    'access_token': access_token,
-                }
-            )
-            logger.info(f"Refreshed token sent successfully to {group_name}.")
-        else:
-            logger.warning(f"Token update for user_id: {user_id} is already being processed.")
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'send_token',
+                'access_token': access_token,
+            }
+        )
+        logger.info(f"Refreshed token sent successfully to {group_name}.")
     except Exception as e:
         logger.error(f"Error sending refreshed token: {e}")
-    finally:
-        if acquired:
-            lock.release()  # Release the lock only if it was acquired
+
 
 
 
@@ -116,54 +103,39 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
 
 @shared_task
 def refresh_tokens():
-    access_token_lifetime = timedelta(minutes=10)  # From your SIMPLE_JWT config
-    expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
+    access_token_lifetime = timedelta(minutes=10)
+    expiration_threshold = timedelta(minutes=5)
 
     tokens = UserToken.objects.all()
-    now = timezone.now()  # Current time with timezone awareness
+    now = timezone.now()
 
     for token_entry in tokens:
-        user_id = token_entry.user.id
-        lock_key = f'user_token_lock_{user_id}'
-        lock = redis_client.lock(lock_key, timeout=60)  # Lock for 60 seconds
-        acquired = False
-        
-        try:
-            if lock.acquire(blocking=False):  # Try to acquire lock without blocking
-                acquired = True
-                token_age = now - token_entry.token_created_at
-                time_until_expiration = access_token_lifetime - token_age
+        token_age = now - token_entry.token_created_at
+        time_until_expiration = access_token_lifetime - token_age
 
-                if time_until_expiration <= expiration_threshold:
-                    # Call the token refresh endpoint
-                    refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
-                    payload = {'refresh': token_entry.refresh_token}
-                    try:
-                        response = requests.post(refresh_url, data=payload)
-                        response_data = response.json()
+        if time_until_expiration <= expiration_threshold:
+            refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
+            payload = {'refresh': token_entry.refresh_token}
+            try:
+                response = requests.post(refresh_url, data=payload)
+                response_data = response.json()
 
-                        if response.status_code == 200:
-                            # Update the tokens
-                            new_access_token = response_data.get('access')
-                            new_refresh_token = response_data.get('refresh')
+                if response.status_code == 200:
+                    new_access_token = response_data.get('access')
+                    new_refresh_token = response_data.get('refresh')
 
-                            token_entry.access_token = new_access_token
-                            token_entry.refresh_token = new_refresh_token
-                            token_entry.token_created_at = now  # Update creation time
-                            token_entry.save()
+                    token_entry.access_token = new_access_token
+                    token_entry.refresh_token = new_refresh_token
+                    token_entry.token_created_at = now
+                    token_entry.save()
 
-                            logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
-                        else:
-                            logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
-                    except Exception as e:
-                        logger.error(f"Error while refreshing tokens for {token_entry.user.name}: {str(e)}")
+                    logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
+                    send_refreshed_token_notification.delay(token_entry.user.id, new_access_token)  # Use .delay() to queue this task
                 else:
-                    logger.info(f"Token for {token_entry.user.name} is not near expiration. No refresh needed.")
-            else:
-                logger.warning(f"Token for user_id {user_id} is already being processed.")
-        finally:
-            if acquired:
-                lock.release()  # Release the lock only if it was acquired
+                    logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
+            except Exception as e:
+                logger.error(f"Error while refreshing tokens for {token_entry.user.name}: {str(e)}")
+
 
             
 # @shared_task
