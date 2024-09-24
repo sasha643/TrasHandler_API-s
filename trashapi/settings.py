@@ -260,7 +260,7 @@ CORS_ALLOW_METHODS = [
 # Channel Layers Configuration for RabbitMQ
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_rabbitmq.RabbitmqChannelLayer',
+        'BACKEND': 'channels_rabbitmq.core.RabbitmqChannelLayer',
         'CONFIG': {
             'hosts': [
                 {'host': '3.108.52.92', 'port': 5672, 'userid': 'guest', 'password': 'guest'},
