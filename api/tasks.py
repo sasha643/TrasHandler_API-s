@@ -28,6 +28,8 @@ def send_notification_task(user_id, message):
         logger.info(f"Sending notification to user_id: {user_id} with message: {message}")
         channel_layer = get_channel_layer()
         group_name = f'Notifications_{user_id}'
+        
+        # Send notification using async_to_sync for a group_send
         async_to_sync(channel_layer.group_send)(
             group_name,
             {
@@ -35,10 +37,10 @@ def send_notification_task(user_id, message):
                 'message': message,
             }
         )
+        
         logger.info(f"Notification sent successfully to {group_name}.")
     except Exception as e:
         logger.error(f"Error sending notification: {e}")
-
 
 @shared_task
 def send_refreshed_token_notification(user_id, access_token):
@@ -54,29 +56,10 @@ def send_refreshed_token_notification(user_id, access_token):
                 'access_token': access_token,
             }
         )
+        
         logger.info(f"Refreshed token sent successfully to {group_name}.")
     except Exception as e:
         logger.error(f"Error sending refreshed token: {e}")
-
-
-
-
-# @shared_task
-# def send_refreshed_token_notification(user_id, access_token):
-#     try:
-#         logger.info(f"Sending refreshed token to user_id: {user_id}")
-#         channel_layer = get_channel_layer()
-#         group_name = f'Token_{user_id}'
-#         async_to_sync(channel_layer.group_send)(
-#             group_name,
-#             {
-#                 'type': 'send_token',
-#                 'access_token': access_token,
-#             }
-#         )
-#         logger.info(f"Refreshed token sent successfully to {group_name}.")
-#     except Exception as e:
-#         logger.error(f"Error sending refreshed token: {e}")
 
 @shared_task
 def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[]):
@@ -99,14 +82,13 @@ def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[])
         return nearest_vendor.vendor.id
     else:
         return None
-    
 
 @shared_task
-def refresh_tokens():
+async def refresh_tokens():
     access_token_lifetime = timedelta(minutes=10)
     expiration_threshold = timedelta(minutes=5)
 
-    tokens = UserToken.objects.all()
+    tokens = await sync_to_async(list)(UserToken.objects.all())
     now = timezone.now()
 
     for token_entry in tokens:
@@ -127,96 +109,45 @@ def refresh_tokens():
                     token_entry.access_token = new_access_token
                     token_entry.refresh_token = new_refresh_token
                     token_entry.token_created_at = now
-                    token_entry.save()
+                    await sync_to_async(token_entry.save)()
 
                     logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
-                    send_refreshed_token_notification.delay(token_entry.user.id, new_access_token)  # Use .delay() to queue this task
+                    send_refreshed_token_notification.delay(token_entry.user.id, new_access_token)
                 else:
                     logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
             except Exception as e:
                 logger.error(f"Error while refreshing tokens for {token_entry.user.name}: {str(e)}")
 
-
-            
-# @shared_task
-# def refresh_tokens():
-#     access_token_lifetime = timedelta(minutes=10)  # From your SIMPLE_JWT config
-#     expiration_threshold = timedelta(minutes=5)  # Refresh tokens 5 minutes before they expire
-
-#     tokens = UserToken.objects.all()
-#     now = timezone.now()  # Get current time with timezone awareness
-
-#     for token_entry in tokens:
-#         # Calculate the token's age
-#         token_age = now - token_entry.token_created_at
-#         time_until_expiration = access_token_lifetime - token_age
-
-#         # Check if the token is close to expiration (less than 5 minutes left)
-#         if time_until_expiration <= expiration_threshold:
-#             # Refresh token using the refresh token endpoint
-#             refresh_url = 'http://3.108.52.92:8000//auth/token/refresh/'
-#             payload = {
-#                 'refresh': token_entry.refresh_token
-#             }
-#             try:
-#                 response = requests.post(refresh_url, data=payload)
-#                 response_data = response.json()
-
-#                 if response.status_code == 200:
-#                     new_access_token = response_data.get('access')
-#                     new_refresh_token = response_data.get('refresh')
-
-#                     # Update the tokens in the database
-#                     with transaction.atomic():
-#                         token_entry.access_token = new_access_token
-#                         token_entry.refresh_token = new_refresh_token
-#                         token_entry.token_created_at = now  # Update the time to now
-#                         token_entry.save()
-
-#                     logger.info(f"Successfully refreshed tokens for {token_entry.user.name}")
-#                 else:
-#                     logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
-#             except Exception as e:
-#                 logger.error(f"Error occurred while refreshing tokens for {token_entry.user.name}: {str(e)}")
-#         else:
-#             logger.info(f"Token for {token_entry.user.name} is not close to expiration, no refresh needed.")
-
-
 @shared_task
-def reassign_pickup_request(pickup_id):
+async def reassign_pickup_request(pickup_id):
     try:
-        pickup = PickupRequest.objects.get(id=pickup_id)
+        pickup = await sync_to_async(PickupRequest.objects.get)(id=pickup_id)
         
         if pickup.status != 'Request Sent':
             return
 
-        # If the current vendor's 60-second window has passed
         if timezone.now() >= pickup.created_at + timedelta(seconds=60):
             current_vendor = pickup.vendor
 
             if current_vendor:
-                # Automatically reject the request for the current vendor
                 pickup.rejected_vendors.add(current_vendor)
-                Notification.objects.create(
+                await sync_to_async(Notification.objects.create)(
                     user=current_vendor, 
                     message="The pickup request has been automatically reassigned as no action was taken.", 
                     relevant=False,
                     recipient_type='vendor'
                 )
 
-            # Find the next nearest vendor who has not rejected the request
             excluded_vendor_ids = list(pickup.rejected_vendors.values_list('id', flat=True))
-            next_vendor = find_next_nearest_vendor(pickup, excluded_vendor_ids)
+            next_vendor = await sync_to_async(find_next_nearest_vendor)(pickup, excluded_vendor_ids)
 
             if next_vendor:
-                # Reassign to the next nearest vendor
                 pickup.vendor = next_vendor
                 pickup.status = 'Request Sent'
-                pickup.created_at = timezone.now()  # Reset the timer for the new vendor
-                pickup.save()
+                pickup.created_at = timezone.now()
+                await sync_to_async(pickup.save)()
 
-                # Notify the new nearest vendor
-                Notification.objects.create(
+                await sync_to_async(Notification.objects.create)(
                     user=next_vendor, 
                     message=json.dumps({
                         "message": f"New pickup request from {pickup.customer.name}, Mobile No: {pickup.customer.mobile_no}",
@@ -227,34 +158,26 @@ def reassign_pickup_request(pickup_id):
                     recipient_type='vendor'
                 )
 
-                # Restart the countdown with a 1-second delay
-                reassign_pickup_request.apply_async((pickup.id,), countdown=60)  # 60 seconds plus 1 second delay
+                reassign_pickup_request.apply_async((pickup.id,), countdown=60)
             else:
-                # Notify the customer that no other active vendors are available
-                Notification.objects.create(
+                await sync_to_async(Notification.objects.create)(
                     user=pickup.customer, 
                     message="No active vendors are available to fulfill your pickup request at the moment.", 
                     relevant=True,
                     recipient_type='customer'
                 )
                 pickup.status = 'No Active Vendors Available'
-                pickup.save()
+                await sync_to_async(pickup.save)()
 
         else:
-            # If the vendor has not rejected and 60 seconds have not passed, reschedule the check
             time_elapsed = timezone.now() - pickup.created_at
             remaining_time = 60 - time_elapsed.total_seconds()
             reassign_pickup_request.apply_async((pickup.id,), countdown=max(int(remaining_time), 1))
 
     except PickupRequest.DoesNotExist:
-        # Handle the case where the pickup request was deleted
         pass
 
-
-def find_next_nearest_vendor(pickup, excluded_vendor_ids):
-    """
-    Helper function to find the next nearest vendor.
-    """
+async def find_next_nearest_vendor(pickup, excluded_vendor_ids):
     nearest_vendor = None
     nearest_distance = None
 
@@ -266,10 +189,9 @@ def find_next_nearest_vendor(pickup, excluded_vendor_ids):
     
     return nearest_vendor
 
-
-def get_user_token(user):
+async def get_user_token(user):
     try:
-        return UserToken.objects.get(user=user)
+        return await sync_to_async(UserToken.objects.get)(user=user)
     except UserToken.DoesNotExist:
         return None
 
