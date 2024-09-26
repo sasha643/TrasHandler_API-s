@@ -261,14 +261,15 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('3.108.52.92', 6379)],
+            "hosts": [('redis', 6379)],
         },
     },
 }
 
 
 
-CELERY_BROKER_URL = 'redis://172.17.0.2:6379/0'
+#CELERY_BROKER_URL = 'redis://172.17.0.2:6379/0'
+CELERY_BROKER_URL = 'redis://redis:6379/0'
 
 CELERY_RESULT_BACKEND = 'django-db'
 
