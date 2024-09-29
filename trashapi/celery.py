@@ -16,7 +16,7 @@ app.conf.beat_schedule = {
 
     'refresh-tokens-every-10-minutes': {
         'task': 'api.tasks.refresh_tokens',
-        'schedule': crontab(minute='*/5'),  # Run every minutes
+        'schedule': crontab(minute='*/30'),  # Run every minutes
     },
 
 }
