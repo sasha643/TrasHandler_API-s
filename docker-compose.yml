@@ -1,0 +1,76 @@
+services:
+  web:
+    build:
+      context: ./Trashandler  # Updated path to your Django project directory
+      dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
+    container_name: trashapi-web
+    ports:
+      - "8000:8000"  # Map port 8000 on the host to port 8000 in the container
+    restart: always  # Ensure the web service restarts automatically
+    networks:
+      - webnet
+    environment:
+      - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
+      - CHANNEL_LAYERS_CONFIG_HOST=redis  # Use internal Redis service
+      - CHANNEL_LAYERS_CONFIG_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
+
+  redis:
+    image: redis:latest  # Use the official Redis image
+    container_name: redis
+    ports:
+      - "6379:6379"  # Map port 6379 on the host to port 6379 in the container
+    restart: always  # Ensure Redis restarts automatically
+    networks:
+      - webnet
+
+  celery_worker:
+    build:
+      context: ./Trashandler  # Updated path to your Django project directory
+      dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
+    container_name: trashapi-celery
+    command: celery -A trashapi worker --loglevel=info -P solo  # Command to run Celery worker
+    depends_on:
+      - redis  # Ensure Redis is started before the Celery worker
+    restart: always  # Ensure the Celery worker restarts automatically
+    networks:
+      - webnet
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
+      - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
+      - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
+      - CHANNEL_LAYERS_CONFIG_PORT=6379
+
+  celery_beat:
+    build:
+      context: ./Trashandler  # Updated path to your Django project directory
+      dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
+    container_name: trashapi-celery-beat
+    command: celery -A trashapi beat -l info  # Command to run Celery beat
+    depends_on:
+      - redis  # Ensure Redis is started before Celery beat
+    restart: always  # Ensure the Celery beat restarts automatically
+    networks:
+      - webnet
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
+      - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
+      - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
+      - CHANNEL_LAYERS_CONFIG_PORT=6379
+
+  kafka_consumer:
+    build:
+      context: ./Trashandler  # Updated path to your Django project directory
+      dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
+    container_name: trashapi-kafka-consumer
+    command: python manage.py run_kafka_consumer  # Command to run Kafka consumer
+    restart: always  # Ensure Kafka consumer restarts automatically
+    networks:
+      - webnet  # Include the same network for communication between services
+    environment:
+      - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
+      - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
+      - CHANNEL_LAYERS_CONFIG_PORT=6379
+
+networks:
+  webnet:
