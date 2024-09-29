@@ -1,7 +1,7 @@
 services:
   web:
     build:
-      context: ./Trashandler  # Updated path to your Django project directory
+      context: .  # Current directory as build context
       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
     container_name: trashapi-web
     ports:
@@ -26,7 +26,7 @@ services:
 
   celery_worker:
     build:
-      context: ./Trashandler  # Updated path to your Django project directory
+      context: .  # Current directory as build context
       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
     container_name: trashapi-celery
     command: celery -A trashapi worker --loglevel=info -P solo  # Command to run Celery worker
@@ -43,7 +43,7 @@ services:
 
   celery_beat:
     build:
-      context: ./Trashandler  # Updated path to your Django project directory
+      context: .  # Current directory as build context
       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
     container_name: trashapi-celery-beat
     command: celery -A trashapi beat -l info  # Command to run Celery beat
@@ -60,7 +60,7 @@ services:
 
   kafka_consumer:
     build:
-      context: ./Trashandler  # Updated path to your Django project directory
+      context: .  # Current directory as build context
       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
     container_name: trashapi-kafka-consumer
     command: python manage.py run_kafka_consumer  # Command to run Kafka consumer
