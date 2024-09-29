@@ -1,3 +1,5 @@
+version: '3.8'  # Specify the version of Docker Compose
+
 services:
   web:
     build:
@@ -14,6 +16,8 @@ services:
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Use internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
+    logging:
+      driver: "none"  # Suppress logs for the web service
 
   redis:
     image: redis:latest  # Use the official Redis image
@@ -23,6 +27,8 @@ services:
     restart: always  # Ensure Redis restarts automatically
     networks:
       - webnet
+    logging:
+      driver: "none"  # Suppress logs for the Redis service
 
   celery_worker:
     build:
@@ -40,6 +46,8 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
+    logging:
+      driver: "none"  # Suppress logs for the Celery worker
 
   celery_beat:
     build:
@@ -57,6 +65,8 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
+    logging:
+      driver: "none"  # Suppress logs for the Celery beat
 
   kafka_consumer:
     build:
@@ -71,6 +81,8 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
+    logging:
+      driver: "none"  # Suppress logs for the Kafka consumer
 
 networks:
   webnet:
