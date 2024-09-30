@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
     container_name: trashapi-web
     ports:
-      - "8000:8000"  # Map port 8000 on the host to port 8000 in the container
+      - "80:8000"  # Map port 80 on the host to port 8000 in the container
     restart: always  # Ensure the web service restarts automatically
     networks:
       - webnet
