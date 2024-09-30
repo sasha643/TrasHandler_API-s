@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 80
 
 # Command to run the application on port 80
-CMD ["uvicorn", "trashapi.asgi:application", "--host", "0.0.0.0", "--port", "80", "--log-level", "debug"]
+CMD ["uvicorn", "trashapi.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
