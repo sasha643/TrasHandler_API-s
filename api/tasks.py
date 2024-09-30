@@ -114,7 +114,7 @@ def refresh_tokens():
         time_until_expiration = access_token_lifetime - token_age
 
         if time_until_expiration <= expiration_threshold:
-            refresh_url = 'http://3.108.52.92:8000/auth/token/refresh/'
+            refresh_url = 'http://3.108.52.92/auth/token/refresh/'
             payload = {'refresh': token_entry.refresh_token}
             try:
                 response = requests.post(refresh_url, data=payload)
