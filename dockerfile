@@ -17,9 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 8000
+# Expose port 80 (for the host) instead of 8000
+EXPOSE 80
 
-# Command to run the application
-CMD ["uvicorn", "trashapi.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
-
+# Command to run the application on port 80
+CMD ["uvicorn", "trashapi.asgi:application", "--host", "0.0.0.0", "--port", "80", "--log-level", "debug"]
