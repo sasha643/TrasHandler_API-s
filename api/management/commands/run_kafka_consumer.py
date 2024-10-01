@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # Configuration for Confluent Kafka Consumer
         conf = {
-            'bootstrap.servers': 'kafka:9092',  # Kafka broker address
+            'bootstrap.servers': '3.108.52.92:9092',  # Kafka broker address
             'group.id': 'vendor-location-group',  # Required group ID for the consumer
             'client.id': 'vendor-location-consumer',  # Client identifier for the consumer
             'auto.offset.reset': 'earliest',  # Start reading at the earliest available message
