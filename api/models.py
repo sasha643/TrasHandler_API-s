@@ -5,7 +5,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-
+import geohash
 
 
 
@@ -137,10 +137,16 @@ class VendorLocation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     is_active = models.BooleanField(default=False)
-    #timestamp = models.DateTimeField(auto_now_add=True)
+    vendor_geohash = models.CharField(max_length=12, blank=True, null=True)  # Add geohash field
+    # timestamp = models.DateTimeField(auto_now_add=True)  # Uncomment if needed
+
+    def save(self, *args, **kwargs):
+        # Automatically set the geohash when saving the vendor location
+        self.geohash = geohash.encode(self.latitude, self.longitude)
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.vendor.name} - {self.latitude}, {self.longitude}'
+        return f'{self.vendor.name} - {self.latitude}, {self.longitude} - Geohash: {self.vendor_geohash}'
     
 class PickupRequest(models.Model):
     STATUS_CHOICES = [
