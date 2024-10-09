@@ -18,6 +18,7 @@ from jwt import InvalidTokenError, ExpiredSignatureError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from api.models import UserToken
+import geohash
 
 
 logger = logging.getLogger(__name__)
@@ -79,26 +80,49 @@ def send_refreshed_token_notification(user_id, access_token):
 #         logger.error(f"Error sending refreshed token: {e}")
 
 @shared_task
-def assign_vendor_task(customer_id, latitude, longitude, excluded_vendor_ids=[]):
+def assign_vendor_task(customer_id, latitude, longitude):
     try:
         customer = CustomerAuth.objects.get(id=customer_id)
     except CustomerAuth.DoesNotExist:
         return {"error": "Customer profile not found"}
 
-    active_vendors = VendorLocation.objects.exclude(vendor_id__in=excluded_vendor_ids).filter(is_active=True)
-    min_distance = float('inf')
-    nearest_vendor = None
+    # Get the geohash of the customer location at precision 5 (~4.9 km² area)
+    customer_geohash = geohash.encode(latitude, longitude, precision=4)
 
+    # Get neighboring geohashes to expand the search area
+    neighbors = geohash.neighbors(customer_geohash)
+    neighbors.append(customer_geohash)  # Include the customer's own geohash
+
+    # Filter vendors who are active and in the current/neighbors geohash regions
+    active_vendors = VendorLocation.objects.filter(
+        vendor_geohash__in=neighbors,
+        is_active=True
+    )
+
+    if not active_vendors:
+        return None  # No vendors found in the geohash area
+
+    # List to store vendors with distances
+    vendors_within_range = []
+
+    # Calculate the distance for each vendor using Haversine
     for vendor in active_vendors:
-        distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
-        if distance < min_distance:
-            min_distance = distance
-            nearest_vendor = vendor
+        vendor_distance = haversine(float(latitude), float(longitude), vendor.latitude, vendor.longitude)
 
-    if nearest_vendor:
-        return nearest_vendor.vendor.id
-    else:
+        # Add vendors within 5 km to the list
+        if vendor_distance <= 5.0:
+            vendors_within_range.append((vendor, vendor_distance))
+
+    # If no vendors within 5 km, return None
+    if not vendors_within_range:
         return None
+
+    # Sort the vendors based on distance (nearest first)
+    vendors_within_range.sort(key=lambda x: x[1])
+
+    # Return the nearest vendor's ID (first vendor in sorted list)
+    nearest_vendor = vendors_within_range[0][0]
+    return nearest_vendor.vendor.id
     
 
 @shared_task
@@ -204,33 +228,20 @@ def reassign_pickup_request(pickup_id):
                     recipient_type='vendor'
                 )
 
-            # Find the next nearest vendor who has not rejected the request
+            # Get the customer's geohash and its neighboring regions
+            customer_geohash = geohash.encode(pickup.latitude, pickup.longitude, precision=4)
+            neighbors = geohash.neighbors(customer_geohash)
+            neighbors.append(customer_geohash)  # Include the customer's own geohash
+            
+            # Filter vendors who are active and in the current/neighbors geohash regions
             excluded_vendor_ids = list(pickup.rejected_vendors.values_list('id', flat=True))
-            next_vendor = find_next_nearest_vendor(pickup, excluded_vendor_ids)
+            active_vendors = VendorLocation.objects.filter(
+                vendor_geohash__in=neighbors,
+                is_active=True
+            ).exclude(vendor__id__in=excluded_vendor_ids)
 
-            if next_vendor:
-                # Reassign to the next nearest vendor
-                pickup.vendor = next_vendor
-                pickup.status = 'Request Sent'
-                pickup.created_at = timezone.now()  # Reset the timer for the new vendor
-                pickup.save()
-
-                # Notify the new nearest vendor
-                Notification.objects.create(
-                    user=next_vendor, 
-                    message=json.dumps({
-                        "message": f"New pickup request from {pickup.customer.name}, Mobile No: {pickup.customer.mobile_no}",
-                        "latitude": pickup.latitude,
-                        "longitude": pickup.longitude
-                    }), 
-                    relevant=True,
-                    recipient_type='vendor'
-                )
-
-                # Restart the countdown with a 1-second delay
-                reassign_pickup_request.apply_async((pickup.id,), countdown=60)  # 60 seconds plus 1 second delay
-            else:
-                # Notify the customer that no other active vendors are available
+            # If no active vendors are found, notify the customer and update status
+            if not active_vendors:
                 Notification.objects.create(
                     user=pickup.customer, 
                     message="No active vendors are available to fulfill your pickup request at the moment.", 
@@ -239,9 +250,56 @@ def reassign_pickup_request(pickup_id):
                 )
                 pickup.status = 'No Active Vendors Available'
                 pickup.save()
+                return
+
+            # List to store vendors within range (5 km)
+            vendors_within_range = []
+
+            # Calculate the distance for each vendor using Haversine
+            for vendor in active_vendors:
+                vendor_distance = haversine(pickup.latitude, pickup.longitude, vendor.latitude, vendor.longitude)
+                if vendor_distance <= 5.0:  # Only consider vendors within 5 km
+                    vendors_within_range.append((vendor.vendor, vendor_distance))
+
+            # If no vendors within 5 km, notify the customer and update status
+            if not vendors_within_range:
+                Notification.objects.create(
+                    user=pickup.customer, 
+                    message="No active vendors within 5 km to fulfill your pickup request.", 
+                    relevant=True,
+                    recipient_type='customer'
+                )
+                pickup.status = 'No Active Vendors Available'
+                pickup.save()
+                return
+
+            # Sort vendors by distance (nearest first)
+            vendors_within_range.sort(key=lambda x: x[1])
+            next_vendor = vendors_within_range[0][0]
+
+            # Reassign the pickup to the nearest vendor and reset the timer
+            pickup.vendor = next_vendor
+            pickup.status = 'Request Sent'
+            pickup.created_at = timezone.now()  # Reset the timer for the new vendor
+            pickup.save()
+
+            # Notify the newly assigned vendor
+            Notification.objects.create(
+                user=next_vendor, 
+                message=json.dumps({
+                    "message": f"New pickup request from {pickup.customer.name}, Mobile No: {pickup.customer.mobile_no}",
+                    "latitude": pickup.latitude,
+                    "longitude": pickup.longitude
+                }), 
+                relevant=True,
+                recipient_type='vendor'
+            )
+
+            # Restart the countdown with a 1-second delay
+            reassign_pickup_request.apply_async((pickup.id,), countdown=60)  # 60 seconds plus 1 second delay
 
         else:
-            # If the vendor has not rejected and 60 seconds have not passed, reschedule the check
+            # If 60 seconds haven't passed, reschedule the check
             time_elapsed = timezone.now() - pickup.created_at
             remaining_time = 60 - time_elapsed.total_seconds()
             reassign_pickup_request.apply_async((pickup.id,), countdown=max(int(remaining_time), 1))
@@ -249,23 +307,6 @@ def reassign_pickup_request(pickup_id):
     except PickupRequest.DoesNotExist:
         # Handle the case where the pickup request was deleted
         pass
-
-
-def find_next_nearest_vendor(pickup, excluded_vendor_ids):
-    """
-    Helper function to find the next nearest vendor.
-    """
-    nearest_vendor = None
-    nearest_distance = None
-
-    for location in VendorLocation.objects.filter(is_active=True).exclude(vendor__id__in=excluded_vendor_ids):
-        distance = haversine(pickup.latitude, pickup.longitude, location.latitude, location.longitude)
-        if nearest_distance is None or distance < nearest_distance:
-            nearest_distance = distance
-            nearest_vendor = location.vendor
-    
-    return nearest_vendor
-
 
 def get_user_token(user):
     try:
