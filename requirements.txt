@@ -114,3 +114,4 @@ whitenoise==6.7.0
 yarl==1.9.4
 zope.event==5.0
 zope.interface==7.0.1
+geohash==1.0
