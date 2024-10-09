@@ -3,7 +3,7 @@ import json
 
 # Kafka Producer configuration for Confluent Kafka
 conf = {
-    'bootstrap.servers': '3.108.52.92:9092',  # Kafka broker address
+    'bootstrap.servers': '13.201.99.143:9092',  # Kafka broker address
     'client.id': 'vendor-location-producer',  # Client identifier for the producer
     'acks': 'all',  # Wait for acknowledgment from all replicas
 }
