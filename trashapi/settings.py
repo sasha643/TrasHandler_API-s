@@ -167,7 +167,7 @@ DATABASES = {
         'NAME': 'Trashandler',                      # Replace with your database name
         'USER': 'postgres',                  # Replace with your database username
         'PASSWORD': 'postgres',         # Replace with your database password
-        'HOST': '3.108.52.92',             # Replace with your public IP address of local machine
+        'HOST': '13.201.99.143',             # Replace with your public IP address of local machine
         'PORT': '5432',                      # Default PostgreSQL port
     }
 }
@@ -243,7 +243,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['3.108.52.92', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['13.201.99.143', 'localhost', '127.0.0.1']
 
 CORS_ALLOW_METHODS = [
     'GET',
