@@ -4,7 +4,7 @@ from asgiref.sync import async_to_sync
 from .models import Notification, PickupRequest, UserToken
 from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification
 import redis
-
+import geohash
 import secrets
 
 from django.dispatch import Signal
@@ -12,7 +12,15 @@ from django.dispatch import Signal
 
 websocket_disconnected = Signal()
 
-
+@receiver(post_save, sender=VendorLocation)
+def generate_vendor_geohash(sender, instance, **kwargs):
+    # Check if latitude and longitude are present
+    if instance.latitude and instance.longitude:
+        # Generate geohash using the latitude and longitude
+        vendor_geohash = geohash.encode(instance.latitude, instance.longitude, precision=4)
+        
+        # Save the generated geohash into the instance
+        VendorLocation.objects.filter(id=instance.id).update(vendor_geohash=vendor_geohash)
 
 @receiver(post_save, sender=Notification)
 def handle_notification_save(sender, instance, **kwargs):
