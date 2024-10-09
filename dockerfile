@@ -1,9 +1,6 @@
 # Use the official Python image as a base
 FROM python:3.9-slim
 
-# Install GCC and any other necessary system dependencies
-RUN apt-get update && apt-get install -y gcc python3-dev && rm -rf /var/lib/apt/lists/*
-
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1  
 ENV PYTHONUNBUFFERED=1         
@@ -12,7 +9,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Copy the requirements file
-COPY requirements.txt ./
+COPY requirements.txt .
 
 # Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
