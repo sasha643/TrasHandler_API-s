@@ -27,7 +27,7 @@ class VendorCompleteProfileModelAdmin(admin.ModelAdmin):
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 class VendorLocationModelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'vendor', 'latitude', 'longitude', 'is_active']
+    list_display = ['id', 'vendor', 'latitude', 'longitude', 'is_active', 'vendor_geohash']
     search_fields = ['vendor__name', 'vendor__mobile_no']
 
 
