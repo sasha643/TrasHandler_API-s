@@ -1,9 +1,9 @@
-# Stage 1: Build
-FROM python:3.9-slim AS builder
+# Use the official Python image as a base
+FROM python:3.9-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1  
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1         
 
 # Set the working directory
 WORKDIR /app
@@ -12,29 +12,21 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apt-get remove --purge -y gcc g++ \
-    && apt-get autoremove -y \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Runtime
-FROM python:3.9-slim
+# Copy the requirements file
+COPY requirements.txt .
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1  
-ENV PYTHONUNBUFFERED=1
+# Install the dependencies including python-geohash
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Set the working directory
-WORKDIR /app
-
-# Copy installed packages from the builder stage
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+# Remove build tools after installation
+RUN apt-get remove --purge -y gcc g++ && apt-get autoremove -y && apt-get clean
 
 # Copy the rest of the application code
 COPY . .
 
-# Expose port 80
+# Expose port 80 (for the host) instead of 8000
 EXPOSE 80
 
 # Command to run the application on port 80
