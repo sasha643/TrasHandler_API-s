@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from asgiref.sync import async_to_sync
-from .models import Notification, PickupRequest, UserToken
+from .models import Notification, PickupRequest, UserToken, VendorLocation
 from .tasks import send_notification_task, reassign_pickup_request, send_refreshed_token_notification
 import redis
 import geohash
