@@ -20,9 +20,6 @@ COPY requirements.txt .
 # Install the dependencies including python-geohash
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Remove build tools after installation
-RUN apt-get remove --purge -y gcc g++ && apt-get autoremove -y && apt-get clean
-
 # Copy the rest of the application code
 COPY . .
 
