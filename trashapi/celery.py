@@ -13,12 +13,10 @@ app = Celery('trashapi')
 
 
 app.conf.beat_schedule = {
-
-    'refresh-tokens-every-5-minutes': {
+    'refresh-tokens-every-minute': {
         'task': 'api.tasks.refresh_tokens',
-        'schedule': crontab(minute='*/5'),  # Run every minutes
+        'schedule': crontab(minute='*'),  # Run every minute
     },
-
 }
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
