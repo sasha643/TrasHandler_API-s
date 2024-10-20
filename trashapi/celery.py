@@ -3,6 +3,7 @@ import os
 from celery import Celery
 from trashapi import settings
 from celery.schedules import crontab, schedule
+from datetime import timedelta
 
 
 # set the default Django settings module for the 'celery' program.
