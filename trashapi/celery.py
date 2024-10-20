@@ -13,9 +13,9 @@ app = Celery('trashapi')
 
 
 app.conf.beat_schedule = {
-    'refresh-tokens-every-minute': {
+    'refresh-tokens-every-second': {
         'task': 'api.tasks.refresh_tokens',
-        'schedule': crontab(minute='*'),  # Run every minute
+        'schedule': timedelta(seconds=1),  # Run every second
     },
 }
 
