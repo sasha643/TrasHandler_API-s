@@ -127,8 +127,8 @@ def assign_vendor_task(customer_id, latitude, longitude):
 
 @shared_task
 def refresh_tokens():
-    access_token_lifetime = timedelta(minutes=60)
-    expiration_threshold = timedelta(minutes=5)
+    access_token_lifetime = timedelta(minutes=2)
+    expiration_threshold = timedelta(minutes=1)
 
     tokens = UserToken.objects.all()
     now = timezone.now()
