@@ -30,6 +30,21 @@ services:
     logging:
       driver: "none"  # Suppress logs for the Redis service
 
+  postgres:
+    image: postgres:latest  # Use the official PostgreSQL image
+    container_name: trashapi-postgres
+    environment:
+      POSTGRES_DB: Customers  # Database name
+      POSTGRES_USER: Trashandler  # Username
+      POSTGRES_PASSWORD: Trashandler  # Password
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port
+    restart: always  # Ensure PostgreSQL restarts automatically
+    networks:
+      - webnet
+    logging:
+      driver: "none"  # Suppress logs for the PostgreSQL service
+
   celery_worker:
     build:
       context: .  # Current directory as build context
@@ -38,6 +53,7 @@ services:
     command: celery -A trashapi worker --loglevel=info -P solo  # Command to run Celery worker
     depends_on:
       - redis  # Ensure Redis is started before the Celery worker
+      - postgres  # Ensure PostgreSQL is started before the Celery worker
     restart: always  # Ensure the Celery worker restarts automatically
     networks:
       - webnet
@@ -46,8 +62,6 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
-    logging:
-      driver: "none"  # Suppress logs for the Celery worker
 
   celery_beat:
     build:
@@ -57,6 +71,7 @@ services:
     command: celery -A trashapi beat -l info  # Command to run Celery beat
     depends_on:
       - redis  # Ensure Redis is started before Celery beat
+      - postgres  # Ensure PostgreSQL is started before Celery beat
     restart: always  # Ensure the Celery beat restarts automatically
     networks:
       - webnet
@@ -65,8 +80,6 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
-    logging:
-      driver: "none"  # Suppress logs for the Celery beat
 
   kafka_consumer:
     build:
@@ -81,8 +94,6 @@ services:
       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
-    logging:
-      driver: "none"  # Suppress logs for the Kafka consumer
 
 networks:
   webnet:
