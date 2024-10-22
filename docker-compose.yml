@@ -33,21 +33,19 @@ services:
       POSTGRES_DB: Customers  # Database name
       POSTGRES_USER: Trashandler  # Username
       POSTGRES_PASSWORD: Trashandler  # Password
-      POSTGRES_LOGGING_CONFIG: |
-        log_destination = 'stderr'
-        logging_collector = 'on'
-        log_directory = 'pg_log'
-        log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
-        log_rotation_age = '1d'  # Rotate logs daily
-        log_rotation_size = '0'  # Disable size-based rotation
-        log_statement = 'all'  # Log all statements
     ports:
       - "5432:5432"  # Expose PostgreSQL port
     restart: always  # Ensure PostgreSQL restarts automatically
     networks:
       - webnet
     volumes:
+      - pg_data:/var/lib/postgresql/data  # Mount for database data
       - pg_log:/var/lib/postgresql/data/pg_log  # Mount for logs
+    logging:
+      driver: "json-file"  # Use the default logging driver
+      options:
+        max-size: "10m"  # Set maximum size of log file
+        max-file: "3"  # Set maximum number of log files
 
   celery_worker:
     build:
@@ -99,8 +97,9 @@ services:
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
 
-volumes:
-  pg_log:  # Define a volume for PostgreSQL logs
-
 networks:
   webnet:
+
+volumes:
+  pg_data:  # Volume for PostgreSQL data
+  pg_log:   # Volume for PostgreSQL logs
