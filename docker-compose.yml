@@ -40,12 +40,7 @@ services:
       - webnet
     volumes:
       - pg_data:/var/lib/postgresql/data  # Mount for database data
-      - pg_log:/var/lib/postgresql/data/pg_log  # Mount for logs
-    logging:
-      driver: "json-file"  # Use the default logging driver
-      options:
-        max-size: "10m"  # Set maximum size of log file
-        max-file: "3"  # Set maximum number of log files
+    # Removed logging configuration
 
   celery_worker:
     build:
@@ -102,4 +97,3 @@ networks:
 
 volumes:
   pg_data:  # Volume for PostgreSQL data
-  pg_log:   # Volume for PostgreSQL logs
