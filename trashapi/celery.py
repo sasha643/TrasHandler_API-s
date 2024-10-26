@@ -13,12 +13,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'trashapi.settings')
 app = Celery('trashapi')
 
 
-app.conf.beat_schedule = {
+'''app.conf.beat_schedule = {
     'refresh-tokens-every-second': {
         'task': 'api.tasks.refresh_tokens',
         'schedule': timedelta(seconds=1),  # Run every second
     },
-}
+}'''
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
