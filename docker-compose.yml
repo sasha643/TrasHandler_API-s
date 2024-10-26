@@ -60,23 +60,24 @@ services:
       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
       - CHANNEL_LAYERS_CONFIG_PORT=6379
 
-  celery_beat:
-    build:
-      context: .  # Current directory as build context
-      dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
-    container_name: trashapi-celery-beat
-    command: celery -A trashapi beat -l info  # Command to run Celery beat
-    depends_on:
-      - redis  # Ensure Redis is started before Celery beat
-      - postgres  # Ensure PostgreSQL is started before Celery beat
-    restart: always  # Ensure the Celery beat restarts automatically
-    networks:
-      - webnet
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
-      - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
-      - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
-      - CHANNEL_LAYERS_CONFIG_PORT=6379
+  # celery_beat:
+#     build:
+#       context: .  # Current directory as build context
+#       dockerfile: Dockerfile  # Ensure the Dockerfile is named correctly
+#     container_name: trashapi-celery-beat
+#     command: celery -A trashapi beat -l info  # Command to run Celery beat
+#     depends_on:
+#       - redis  # Ensure Redis is started before Celery beat
+#       - postgres  # Ensure PostgreSQL is started before Celery beat
+#     restart: always  # Ensure the Celery beat restarts automatically
+#     networks:
+#       - webnet
+#     environment:
+#       - CELERY_BROKER_URL=redis://redis:6379/0  # Internal Redis URL
+#       - CHANNEL_LAYERS_BACKEND=channels_redis.core.RedisChannelLayer
+#       - CHANNEL_LAYERS_CONFIG_HOST=redis  # Internal Redis service
+#       - CHANNEL_LAYERS_CONFIG_PORT=6379
+
 
   kafka_consumer:
     build:
