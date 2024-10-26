@@ -49,8 +49,8 @@ class PickupRequestModelAdmin(admin.ModelAdmin):
 class UserTokenModelAdmin(admin.ModelAdmin):
     list_display = ('user', 'access_token', 'refresh_token','token_created_at')
     
-admin.site.register(CustomerAuth, CustomerAuthModelAdmin)
-admin.site.register(VendorAuth, VendorAuthModelAdmin)
+admin.site.register(CustomerAuth, CustomerAuthAdmin)
+admin.site.register(VendorAuth, VendorAuthAdmin)
 admin.site.register(PhotoUpload, PhotoUploadModelAdmin)
 admin.site.register(CustomerLocation, CustomerLocationModelAdmin)
 admin.site.register(VendorCompleteProfile, VendorCompleteProfileModelAdmin)
