@@ -6,14 +6,21 @@ from .models import *
 class NotificationModelAdmin(admin.ModelAdmin):
     list_display = ['user', 'message','created_at', 'sent', 'recipient_type']
     # search_fields = ['recipient_type']
-
+"""
 class CustomerAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name','email', 'mobile_no']
 
 
 class VendorAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'mobile_no']
+"""
+class CustomerAuthAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mobile_no')
+    search_fields = ('mobile_no',)
 
+class VendorAuthAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mobile_no')
+    search_fields = ('mobile_no',)
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
     list_display = ['id','customer', 'photo', 'description', 'landmark', 'time_slot']
