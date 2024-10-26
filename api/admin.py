@@ -15,11 +15,11 @@ class VendorAuthModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'email', 'mobile_no']
 """
 class CustomerAuthAdmin(admin.ModelAdmin):
-    list_display = ('id', 'mobile_no')
+    list_display = ('id', 'mobile_no','name')
     search_fields = ('mobile_no',)
 
 class VendorAuthAdmin(admin.ModelAdmin):
-    list_display = ('id', 'mobile_no')
+    list_display = ('id', 'mobile_no','name')
     search_fields = ('mobile_no',)
 
 class PhotoUploadModelAdmin(admin.ModelAdmin):
