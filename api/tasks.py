@@ -125,7 +125,7 @@ def assign_vendor_task(customer_id, latitude, longitude):
     return nearest_vendor.vendor.id
     
 
-@shared_task
+'''@shared_task
 def refresh_tokens():
     access_token_lifetime = timedelta(minutes=2)
     expiration_threshold = timedelta(minutes=1)
@@ -159,7 +159,7 @@ def refresh_tokens():
                     logger.error(f"Failed to refresh tokens for {token_entry.user.name}: {response_data.get('detail')}")
             except Exception as e:
                 logger.error(f"Error while refreshing tokens for {token_entry.user.name}: {str(e)}")
-
+'''
 
             
 # @shared_task
