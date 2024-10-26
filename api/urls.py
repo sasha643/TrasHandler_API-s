@@ -12,13 +12,18 @@ from django.views.static import serve
 
 
 from .views import *
-
+"""
 customer_auth_router = routers.SimpleRouter()
 customer_auth_router.register(r'customerauth', CustomerAuthViewSet)
 
 vendor_auth_router = routers.SimpleRouter()
 vendor_auth_router.register(r'vendorauth', VendorAuthViewSet)
+"""
+vendor_auth_router = routers.SimpleRouter()
+vendor_auth_router.register(r'auth/vendor', VendorAuthViewSet, basename='vendor-auth')
 
+customer_auth_router = routers.SimpleRouter()
+customer_auth_router.register(r'auth/customer', CustomerAuthViewSet, basename='customer-auth')
 
 upload_auth_router = routers.SimpleRouter()
 upload_auth_router.register(r'upload', PhotoUploadViewSet)
@@ -51,11 +56,11 @@ urlpatterns = [
     # Serve other Sphinx documentation files
     re_path(r'^documentation/(?P<path>.*)$', serve, {'document_root': doc_path}),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/auth/customer/register/', CustomerAuthRegisterView.as_view(), name='customer-register'),
-    path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
-    path('customersignin/', CustomerSigninView.as_view(), name='customer-login'),
-    path('vendorsignin/', VendorSigninView.as_view(), name='vendor-login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
+    #path('api/auth/customer/register/', CustomerAuthRegisterView.as_view(), name='customer-register'),
+    #path('api/auth/vendor/register/', VendorAuthRegisterView.as_view(), name='vendor-register'),
+    #path('customersignin/', CustomerSigninView.as_view(), name='customer-login'),
+    #path('vendorsignin/', VendorSigninView.as_view(), name='vendor-login'),
+    #path('logout/', LogoutView.as_view(), name='logout'),
     path('', include(customer_auth_router.urls)),
     path('', include(vendor_auth_router.urls)),
     path('', include(upload_auth_router.urls)),
