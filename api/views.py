@@ -48,7 +48,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
             if user and isinstance(user, CustomerAuth):  # Check if user is of type CustomerAuth
                 return self.login_user(user)
             else:
-                return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'error': 'Number already exists as vendor'}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -97,7 +97,7 @@ class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             if user and isinstance(user, VendorAuth):  # Check if user is of type VendorAuth
                 return self.login_user(user)
             else:
-                return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'error': 'Number already exists as customer'}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
