@@ -8,9 +8,44 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 import geohash
 
 
+class CustomUserManager(BaseUserManager):
+    def create_user(self, mobile_no, password=None, **extra_fields):
+        if not mobile_no:
+            raise ValueError('The mobile number must be set')
+        user = self.model(mobile_no=mobile_no, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, mobile_no, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(mobile_no, password, **extra_fields)
 
 
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    id = models.AutoField(primary_key=True)
+    mobile_no = models.CharField(max_length=15, unique=True)
+    is_active = models.BooleanField(default=True)
+    name = models.CharField(max_length=50, null=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
 
+    USERNAME_FIELD = 'mobile_no'
+    REQUIRED_FIELDS = []
+
+    objects = CustomUserManager()
+
+    def __str__(self):
+        return self.mobile_no
+        
+"""
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, mobile_no, password=None, **extra_fields):
         if not email:
@@ -53,7 +88,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         objects = CustomUserManager()
         def __str__(self):
             return self.name
-
+"""
 
 class CustomerAuth(CustomUser):
 
