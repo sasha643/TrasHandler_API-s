@@ -33,8 +33,105 @@ import json
 
 # Create your views here.
 
+class CustomerAuthViewSet(viewsets.GenericViewSet):
+    serializer_class = CustomerAuthSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            mobile_no = serializer.validated_data['mobile_no']
+
+            # Attempt to log in the customer
+            user = authenticate(request, mobile_no=mobile_no)
+
+            if user:
+                # Customer exists, perform login
+                return self.login_user(user)
+            else:
+                # Customer does not exist, perform signup
+                return self.signup_user(serializer)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def login_user(self, user):
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return Response({
+            'message': 'Login successful',
+            'id': user.id,
+            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'access': access_token,
+            'refresh': refresh_token
+        }, status=status.HTTP_200_OK)
+
+    def signup_user(self, serializer):
+        user = serializer.save()  # Save the new user using the serializer
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return Response({
+            'message': 'Signup successful',
+            'id': user.id,
+            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'access': access_token,
+            'refresh': refresh_token
+        }, status=status.HTTP_201_CREATED)
 
 
+# Vendor Authentication View
+class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = VendorAuthSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            mobile_no = serializer.validated_data['mobile_no']
+
+            # Attempt to log in the vendor
+            user = authenticate(request, mobile_no=mobile_no)
+
+            if user:
+                # Vendor exists, perform login
+                return self.login_user(user)
+            else:
+                # Vendor does not exist, perform signup
+                return self.signup_user(serializer)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def login_user(self, user):
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return Response({
+            'message': 'Login successful',
+            'id': user.id,
+            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'access': access_token,
+            'refresh': refresh_token
+        }, status=status.HTTP_200_OK)
+
+    def signup_user(self, serializer):
+        user = serializer.save()  # Save the new user using the serializer
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return Response({
+            'message': 'Signup successful',
+            'id': user.id,
+            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'access': access_token,
+            'refresh': refresh_token
+        }, status=status.HTTP_201_CREATED)
+        
+"""
 class CustomerAuthRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CustomerAuthRegisterSerializer
@@ -202,6 +299,7 @@ class VendorAuthViewSet(viewsets.GenericViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+"""
     
 
 class PhotoUploadViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
