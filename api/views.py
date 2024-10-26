@@ -45,14 +45,12 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
             # Attempt to log in the customer
             user = authenticate(request, mobile_no=mobile_no)
 
-            if user:
-                # Customer exists, perform login
+            if user and isinstance(user, CustomerAuth):  # Check if user is of type CustomerAuth
                 return self.login_user(user)
             else:
-                # Customer does not exist, perform signup
-                return self.signup_user(serializer)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def login_user(self, user):
         refresh = RefreshToken.for_user(user)
@@ -62,13 +60,13 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         return Response({
             'message': 'Login successful',
             'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'name': user.name if hasattr(user, 'name') else '',
             'access': access_token,
             'refresh': refresh_token
         }, status=status.HTTP_200_OK)
 
     def signup_user(self, serializer):
-        user = serializer.save()  # Save the new user using the serializer
+        user = serializer.save()
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
@@ -76,10 +74,11 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         return Response({
             'message': 'Signup successful',
             'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'name': user.name if hasattr(user, 'name') else '',
             'access': access_token,
             'refresh': refresh_token
         }, status=status.HTTP_201_CREATED)
+
 
 
 # Vendor Authentication View
@@ -95,14 +94,12 @@ class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             # Attempt to log in the vendor
             user = authenticate(request, mobile_no=mobile_no)
 
-            if user:
-                # Vendor exists, perform login
+            if user and isinstance(user, VendorAuth):  # Check if user is of type VendorAuth
                 return self.login_user(user)
             else:
-                # Vendor does not exist, perform signup
-                return self.signup_user(serializer)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def login_user(self, user):
         refresh = RefreshToken.for_user(user)
@@ -112,13 +109,13 @@ class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response({
             'message': 'Login successful',
             'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'name': user.name if hasattr(user, 'name') else '',
             'access': access_token,
             'refresh': refresh_token
         }, status=status.HTTP_200_OK)
 
     def signup_user(self, serializer):
-        user = serializer.save()  # Save the new user using the serializer
+        user = serializer.save()
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
@@ -126,10 +123,11 @@ class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response({
             'message': 'Signup successful',
             'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',  # Fallback to empty if name is not present
+            'name': user.name if hasattr(user, 'name') else '',
             'access': access_token,
             'refresh': refresh_token
         }, status=status.HTTP_201_CREATED)
+        
         
 """
 class CustomerAuthRegisterView(generics.CreateAPIView):
