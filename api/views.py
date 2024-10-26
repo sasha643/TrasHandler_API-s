@@ -42,13 +42,20 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         if serializer.is_valid():
             mobile_no = serializer.validated_data['mobile_no']
 
-            # Attempt to log in the customer
-            user = authenticate(request, mobile_no=mobile_no)
+            # Check if the customer already exists
+            customer = CustomerAuth.objects.filter(mobile_no=mobile_no).first()
 
-            if user and isinstance(user, CustomerAuth):  # Check if user is of type CustomerAuth
-                return self.login_user(user)
+            if customer:
+                # If customer exists, attempt to log them in
+                authenticated_user = authenticate(request, mobile_no=mobile_no)
+
+                if authenticated_user and isinstance(authenticated_user, CustomerAuth):
+                    return self.login_user(authenticated_user)
+                else:
+                    return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
             else:
-                return Response({'error': 'Number already exists as vendor'}, status=status.HTTP_401_UNAUTHORIZED)
+                # If customer does not exist, proceed with signup
+                return self.signup_user(serializer)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -66,66 +73,19 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         }, status=status.HTTP_200_OK)
 
     def signup_user(self, serializer):
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
+        mobile_no = serializer.validated_data['mobile_no']
+        # Check if the mobile_no exists in VendorAuth before creating a customer account
+        if VendorAuth.objects.filter(mobile_no=mobile_no).exists():
+            return Response({
+                'error': 'This mobile number is already associated with a vendor account. Please use a different number.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Proceed with creating a new customer account if the number is not taken by a vendor
+        user = serializer.save()
         return Response({
             'message': 'Signup successful',
             'id': user.id,
             'name': user.name if hasattr(user, 'name') else '',
-            'access': access_token,
-            'refresh': refresh_token
-        }, status=status.HTTP_201_CREATED)
-
-
-
-# Vendor Authentication View
-class VendorAuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    serializer_class = VendorAuthSerializer
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            mobile_no = serializer.validated_data['mobile_no']
-
-            # Attempt to log in the vendor
-            user = authenticate(request, mobile_no=mobile_no)
-
-            if user and isinstance(user, VendorAuth):  # Check if user is of type VendorAuth
-                return self.login_user(user)
-            else:
-                return Response({'error': 'Number already exists as customer'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def login_user(self, user):
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
-
-        return Response({
-            'message': 'Login successful',
-            'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',
-            'access': access_token,
-            'refresh': refresh_token
-        }, status=status.HTTP_200_OK)
-
-    def signup_user(self, serializer):
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
-
-        return Response({
-            'message': 'Signup successful',
-            'id': user.id,
-            'name': user.name if hasattr(user, 'name') else '',
-            'access': access_token,
-            'refresh': refresh_token
         }, status=status.HTTP_201_CREATED)
         
         
