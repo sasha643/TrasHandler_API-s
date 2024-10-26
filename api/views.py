@@ -82,10 +82,15 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
 
         # Proceed with creating a new customer account if the number is not taken by a vendor
         user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
         return Response({
             'message': 'Signup successful',
             'id': user.id,
             'name': user.name if hasattr(user, 'name') else '',
+            'access': access_token,
+            'refresh': refresh_token
         }, status=status.HTTP_201_CREATED)
 
 
@@ -139,10 +144,15 @@ class VendorAuthViewSet(viewsets.GenericViewSet):
 
         # Proceed with creating a new vendor account if the number is not taken by a customer
         user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
         return Response({
             'message': 'Signup successful',
             'id': user.id,
             'name': user.name if hasattr(user, 'name') else '',
+            'access': access_token,
+            'refresh': refresh_token
         }, status=status.HTTP_201_CREATED)
         
         
