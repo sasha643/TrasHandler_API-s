@@ -11,8 +11,36 @@ from .models import CustomUser
 
 User = get_user_model()
 
+class CustomerAuthSerializer(serializers.ModelSerializer):
+    mobile_no = serializers.CharField(max_length=15)
+
+    class Meta:
+        model = CustomerAuth
+        fields = ['mobile_no']
+
+    def create(self, validated_data):
+        # Create a new customer authentication record
+        customer_auth = CustomerAuth.objects.create_user(**validated_data)
+        return customer_auth
 
 
+class VendorAuthSerializer(serializers.ModelSerializer):
+    mobile_no = serializers.CharField(max_length=15)
+
+    class Meta:
+        model = VendorAuth
+        fields = ['mobile_no']
+
+    def create(self, validated_data):
+        # Create a new vendor authentication record
+        vendor_auth = VendorAuth.objects.create_user(**validated_data)
+        return vendor_auth
+
+
+class PhoneNumberSerializer(serializers.Serializer):
+    mobile_no = serializers.CharField(max_length=15)
+    
+"""
 class CustomerAuthRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -55,6 +83,7 @@ class CustomerSigninSerializer(serializers.Serializer):
 
 class VendorSigninSerializer(serializers.Serializer):
     mobile_no = serializers.CharField(max_length=15)
+"""
 
 class PhotoUploadSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True)
