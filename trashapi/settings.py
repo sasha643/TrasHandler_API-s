@@ -255,7 +255,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only. In production, specify al
 #     'http://localhost:8000',
 # ]
 
-ALLOWED_HOSTS = ['13.201.99.143', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['13.201.99.143', 'localhost', '127.0.0.1', '3.110.42.80']
 
 CORS_ALLOW_METHODS = [
     'GET',
